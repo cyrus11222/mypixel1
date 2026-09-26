@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#101c18"><meta name="robots" content="noindex">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+  <title>登录 · mypixel club</title><link rel="stylesheet" href="assets/auth.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23101c18'/%3E%3Cpath d='M6 24V8h6v5h8V8h6v16h-6v-6h-8v6z' fill='%23c4f477'/%3E%3C/svg%3E">
+  <script src="assets/auth.js" defer></script>
+</head>
+<body class="login-page">
+  <main class="auth-layout">
+    <section class="auth-scene" aria-label="欢迎来到 mypixel club">
+      <a class="auth-brand" href="/login"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M2 28V4h8v7h12V4h8v24h-8V18H10v10z"/></svg><span>mypixel <b>club</b></span></a>
+      <div class="scene-copy"><p class="auth-kicker">CREATE. CONNECT. BELONG.</p><h1>让想象，<br><span>开始转动。</span></h1><p>纯创造机械动力服务器<br>你的下一件作品，从这里开始。</p></div>
+      <p class="scene-foot">ONE BLOCK. ENDLESS POSSIBILITIES.</p>
+    </section>
+    <section class="auth-panel" aria-labelledby="form-title">
+      <div class="auth-card">
+        <p class="auth-kicker">MYPIXEL CLUB / ACCOUNT</p>
+        <h2 id="form-title">欢迎回来。</h2>
+        <p class="auth-description" id="form-description">登录你的账户，继续创造。</p>
+        <div class="auth-switch" aria-label="选择账户操作"><button type="button" id="tab-login" aria-pressed="true">登录</button><button type="button" id="tab-register" aria-pressed="false">注册</button></div>
+        <form id="auth-form">
+          <label class="field-label" for="username">用户名</label>
+          <input id="username" name="username" type="text" autocomplete="username" required minlength="3" maxlength="20" pattern="[A-Za-z0-9_]{3,20}" autocapitalize="none" spellcheck="false" placeholder="你的用户名" aria-describedby="username-hint">
+          <p class="field-hint" id="username-hint">3–20 位字母、数字或下划线，不区分大小写</p>
+          <label class="field-label" for="password">密码</label>
+          <div class="password-field"><input id="password" name="password" type="password" autocomplete="current-password" required minlength="10" maxlength="128" placeholder="输入密码" aria-describedby="password-hint"><button id="show-password" type="button" aria-label="显示密码" aria-pressed="false">显示</button></div>
+          <p class="field-hint" id="password-hint">10–128 个字符；建议使用独立的长密码</p>
+          <div id="confirm-field" hidden><label class="field-label" for="confirm">确认密码</label><input id="confirm" name="confirm" type="password" autocomplete="new-password" minlength="10" maxlength="128" placeholder="再次输入密码" disabled></div>
+          <label class="remember"><input type="checkbox" id="remember" name="remember"><span>30 天内自动登录<small>仅在自己的设备上勾选</small></span></label>
+          <p id="auth-message" class="auth-message" role="status" aria-live="polite"></p>
+          <button class="auth-submit" id="submit" type="submit"><span id="submit-label">登录并进入</span><span aria-hidden="true">↗</span></button>
+        </form>
+        <noscript><p>请开启 JavaScript 后登录。</p></noscript>
+        <p class="account-note">这是 mypixel club 官网账户，<br>无需提供 Microsoft 或 Minecraft 账户密码。</p>
+        <p class="auth-footer">为每一份热爱而建。<span>MYPIXEL CLUB</span></p>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

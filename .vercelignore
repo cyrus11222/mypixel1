@@ -1,0 +1,8 @@
+.env
+.env.local
+data/
+user.txt
+test/
+*.zip
+README.md
+dev.mjs
