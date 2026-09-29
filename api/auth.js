@@ -5,7 +5,8 @@ export default async function handler(req, res) {
   try {
     const action = new URL(req.url, 'https://local.invalid').searchParams.get('action');
     if (req.method === 'GET' && action === 'me') {
-      const user = await authService().session(token(req));
+      const sessionToken = token(req);
+      const user = sessionToken ? await authService().session(sessionToken) : null;
       return json(res, user ? 200 : 401, user ? { user } : { error: '请先登录。' });
     }
     if (req.method !== 'POST') { res.setHeader('Allow', 'GET, POST'); throw new AuthError(405, '不支持此请求方法。'); }

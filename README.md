@@ -1,5 +1,15 @@
 # mypixel club · GitHub + Vercel 账户版
 
+## 2026-09-29 登录修复
+
+已在线确认 `https://www.mypixel.com.cn/api/auth?action=me` 返回 503，且不涉及账户查询的请求也在 Origin 配置检查阶段返回 503。旧版会因 `APP_ORIGIN` 缺失或格式不符直接失败，并把所有配置问题显示为同一句“账户服务暂不可用”。未获得 Vercel 配置读取权限，无法确认线上实际变量值。
+
+**现有部署立即处理：** Vercel → 项目 → Settings → Environment Variables，将 Production 中的 `APP_ORIGIN` 设为 `https://www.mypixel.com.cn`，然后 Redeploy。只在 GitHub 上传 `.env.example` 不会设置 Vercel 环境变量。
+
+**本修复版：** 未设置 `APP_ORIGIN` 时使用已确认的官网域名；允许首尾空格和域名后的 `/`。没有登录 Cookie 的访客正常进入登录页，不会先初始化整个账户服务。真正提交登录／注册时仍验证服务配置；缺少变量或 GitHub 权限不足会显示具体错误，不会绕过登录或改用浏览器存储。函数日志只记录错误代码与变量名，不记录密钥。
+
+仍须在 Vercel 设置 `GITHUB_OWNER`、`GITHUB_REPO`、`GITHUB_TOKEN`、`RATE_LIMIT_SECRET`；数据分支不是 `main` 时填写 `GITHUB_BRANCH`。这些值无法从公开网站获取。替换本文件夹源码后重新部署；不要覆盖账户仓库内已有的 `user.txt`。本次修复未改动现有密码、会话或账户数据格式。
+
 已保留原官网、动画和服务器地址 `frp-sun.com:56663`，增加首次访问登录／注册、30 天自动登录、退出登录。顶层只有两个 HTML，双击可查看页面外观；注册／登录必须通过部署后的 Vercel 网站或本地开发服务使用。此版本由 Vercel Functions 处理验证。
 
 ## 部署到现有 GitHub + Vercel 项目

@@ -2,6 +2,10 @@
   'use strict';
   const $ = id => document.getElementById(id);
   let mode = 'login', busy = false;
+  async function responseData(response) {
+    try { return await response.json(); }
+    catch { throw new Error(`登录接口未正确响应（HTTP ${response.status}），请服主检查 Vercel 部署配置。`); }
+  }
   const message = (text, success = false) => { $('auth-message').textContent = text; $('auth-message').dataset.success = String(success); };
   function setMode(next) {
     if (busy) return;
@@ -35,7 +39,7 @@
       const response = await fetch('/api/auth?action=' + mode, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
         username: $('username').value.trim(), password: $('password').value, remember: $('remember').checked
       }) });
-      const result = await response.json();
+      const result = await responseData(response);
       if (!response.ok) throw new Error(result.error || '操作失败，请重试。');
       $('password').value = $('confirm').value = ''; message('验证成功，正在进入官网…', true); location.replace('/');
     } catch (e) { message(e instanceof TypeError || e instanceof SyntaxError ? '暂时无法连接账户服务，请稍后重试。' : e.message); }
@@ -43,8 +47,11 @@
   });
   async function restore() {
     if (location.protocol === 'file:') { message('请通过部署后的 Vercel 网站登录。'); return; }
-    try { const response = await fetch('/api/auth?action=me', { credentials:'same-origin',cache:'no-store' }); if (response.ok) location.replace('/'); else if(response.status !== 401) message('账户服务暂不可用，请稍后重试或联系服主。'); }
-    catch { message('暂时无法连接账户服务，请检查网络后重试。'); }
+    try {
+      const response = await fetch('/api/auth?action=me', { credentials:'same-origin',cache:'no-store' });
+      if (response.ok) { await responseData(response); location.replace('/'); }
+      else if(response.status !== 401) { const result = await responseData(response); message(result.error || `登录状态验证失败（HTTP ${response.status}）。`); }
+    } catch (error) { message(error instanceof TypeError ? '暂时无法连接账户服务，请检查网络后重试。' : error.message); }
   }
   window.addEventListener('pageshow', restore);
 })();

@@ -7,7 +7,8 @@ export default async function handler(req, res) {
   common(res);
   if (!['GET', 'HEAD'].includes(req.method)) { res.statusCode = 405; res.setHeader('Allow', 'GET, HEAD'); return res.end(); }
   try {
-    const user = await authService().session(token(req));
+    const sessionToken = token(req);
+    const user = sessionToken ? await authService().session(sessionToken) : null;
     if (!user) { res.statusCode = 302; res.setHeader('Location', '/login'); return res.end(); }
     htmlPromise ||= readFile(path.join(process.cwd(), 'index.html'), 'utf8').catch(e => { htmlPromise = null; throw e; });
     const html = (await htmlPromise).replaceAll('href="assets/', 'href="/assets/').replaceAll('src="assets/', 'src="/assets/');
