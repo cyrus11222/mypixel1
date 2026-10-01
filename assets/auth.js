@@ -4,8 +4,17 @@
   const COOLDOWN_KEY = 'mypixel:auth-cooldown-until:v1';
   const COOLDOWN_MS = 60_000;
   let mode = 'login', busy = false, cooldownUntil = 0, timer = null, wasCooling = false, attempt = 0;
+  const query = new URLSearchParams(location.search);
+  const loginReasons = {
+    kicked: '你已被退出登录，请重新登录后继续。',
+    banned: '你的账户已被封禁，请联系管理员。',
+    deleted: '你的账户已被管理员永久删除，原账户无法继续登录。',
+    expired: '登录已失效，请重新登录后继续。'
+  };
+  const reason = query.get('reason');
+  const initialNotice = Object.hasOwn(loginReasons, reason) ? loginReasons[reason] : '';
   const home = (location.protocol === 'file:' ? 'index.html' : '/') +
-    (new URLSearchParams(location.search).get('next') === 'developers' ? '#developers' : '');
+    (query.get('next') === 'developers' ? '#developers' : '');
   $('guest-link').href = home;
 
   async function responseData(response) {
@@ -16,6 +25,13 @@
     $('auth-message').textContent = text;
     $('auth-message').dataset.success = String(success);
   };
+  function accountErrorMessage(result, fallback) {
+    if (typeof result?.error === 'string' && result.error.trim()) return result.error;
+    if (result?.code === 'ACCOUNT_BANNED') return loginReasons.banned;
+    if (result?.code === 'SESSION_EXPIRED') return loginReasons.expired;
+    return fallback;
+  }
+  if (initialNotice) message(initialNotice);
   function storedDeadline() {
     try {
       const value = Number(localStorage.getItem(COOLDOWN_KEY));
@@ -116,7 +132,7 @@
       applyServerCooldown(response);
       const result = await responseData(response);
       applyServerCooldown(response, result);
-      if (!response.ok) throw new Error(result.error || '操作失败，请重试。');
+      if (!response.ok) throw new Error(accountErrorMessage(result, '操作失败，请重试。'));
       $('password').value = $('confirm').value = '';
       message('验证成功，正在进入官网…', true);
       location.replace(home);
@@ -134,9 +150,12 @@
     try {
       const response = await fetch('/api/auth?action=me', { credentials: 'same-origin', cache: 'no-store' });
       if (response.ok) { await responseData(response); location.replace(home); }
-      else if (response.status !== 401) {
+      else {
         const result = await responseData(response);
-        if (!busy && initialAttempt === attempt) message(result.error || `登录状态验证失败（HTTP ${response.status}）。`);
+        if (!busy && initialAttempt === attempt) {
+          if (response.status !== 401) message(accountErrorMessage(result, `登录状态验证失败（HTTP ${response.status}）。`));
+          else if (result?.code === 'SESSION_EXPIRED' && !initialNotice) message(accountErrorMessage(result, loginReasons.expired));
+        }
       }
     } catch (error) {
       if (!busy && initialAttempt === attempt) message(error instanceof TypeError ? '暂时无法连接账户服务，请检查网络后重试。' : error.message);

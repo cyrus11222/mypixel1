@@ -1,0 +1,61 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtemp, rm } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { hashPassword } from '../lib/auth.mjs';
+
+test('admin and ticket HTTP routes enforce origin, session, body contracts and safe public responses', async t => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'mypixel-admin-api-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const adminPassword = 'api-test-admin-password'; const executionKey = 'api-test-execution-key';
+  const [adminPasswordHash, executionKeyHash] = await Promise.all([hashPassword(adminPassword), hashPassword(executionKey)]);
+  const envNames = ['VERCEL', 'AUTH_STORE', 'LOCAL_DATA_FILE', 'RATE_LIMIT_SECRET', 'APP_ORIGIN', 'ADMIN_PASSWORD_HASH', 'ADMIN_EXECUTION_KEY_HASH'];
+  const saved = Object.fromEntries(envNames.map(name => [name, process.env[name]]));
+  t.after(() => { for (const name of envNames) { if (saved[name] === undefined) delete process.env[name]; else process.env[name] = saved[name]; } });
+  Object.assign(process.env, { AUTH_STORE: 'local', LOCAL_DATA_FILE: path.join(directory, 'user.txt'), RATE_LIMIT_SECRET: 'api-test-rate-secret-'.repeat(4), APP_ORIGIN: 'http://127.0.0.1:3000', ADMIN_PASSWORD_HASH: adminPasswordHash, ADMIN_EXECUTION_KEY_HASH: executionKeyHash });
+  delete process.env.VERCEL;
+  const { default: handler } = await import('../api/auth.js');
+  const { authService } = await import('../lib/http.mjs');
+  let now = Date.parse('2026-10-01T12:00:00+08:00'); authService().now = () => now;
+  const request = async (action, { method = 'GET', body, cookie = '', origin = process.env.APP_ORIGIN } = {}) => {
+    const response = { headers: {}, setHeader(name, value) { this.headers[name.toLowerCase()] = value; }, end(text) { this.payload = JSON.parse(text); } };
+    await handler({ method, url: '/api/auth?action=' + action, headers: { origin, 'content-type': 'application/json', cookie }, body, socket: { remoteAddress: 'api-test-ip' } }, response);
+    return response;
+  };
+  const post = (action, body, cookie = '', origin) => request(action, { method: 'POST', body, cookie, origin });
+  const config = await request('public-config'); assert.equal(config.statusCode, 200); assert.equal(config.payload.execution.configured, false);
+  for (const secret of [adminPassword, executionKey, adminPasswordHash, executionKeyHash]) assert.ok(!JSON.stringify(config.payload).includes(secret));
+  for (const action of ['tickets', 'review-tickets', 'admin-state']) assert.equal((await request(action)).statusCode, 401);
+  for (const action of ['admin-command', 'ticket-create', 'ticket-review', 'notifications-ack']) {
+    assert.equal((await post(action, {})).statusCode, 401);
+    assert.equal((await post(action, {}, '', 'https://attacker.invalid')).statusCode, 403);
+  }
+  const loggedIn = await post('login', { username: 'admindevs', password: adminPassword, remember: true });
+  assert.equal(loggedIn.statusCode, 200); assert.equal(loggedIn.payload.user.role, 'admin');
+  const adminCookie = loggedIn.headers['set-cookie'].split(';')[0];
+  assert.equal((await request('admin-state', { cookie: adminCookie })).statusCode, 200);
+  assert.equal((await post('bind-game', { gameId: 'AdminGame' }, adminCookie)).statusCode, 403);
+  const updated = await post('admin-command', { command: 'setintty devplayer API 测试协议' }, adminCookie);
+  assert.equal(updated.statusCode, 200); assert.equal((await request('public-config')).payload.agreement.content, 'API 测试协议');
+  now += 60_000;
+  const player = await post('register', { username: 'ApiPlayer', password: 'api-player-test-password', remember: true }); assert.equal(player.statusCode, 201);
+  const playerCookie = player.headers['set-cookie'].split(';')[0];
+  assert.equal((await request('admin-state', { cookie: playerCookie })).statusCode, 403);
+  await post('bind-game', { gameId: 'ApiPlayerGame' }, playerCookie);
+  await post('join-community', { accepted: true, agreementVersion: updated.payload.agreement.version }, playerCookie);
+  const submitted = await post('ticket-create', { type: 'materials', purpose: '测试物资申请', materials: '铁锭 x64' }, playerCookie);
+  assert.equal(submitted.statusCode, 201); const ticketId = submitted.payload.ticket.id;
+  assert.equal((await request('tickets', { cookie: playerCookie })).payload.tickets.length, 1);
+  assert.equal((await request('review-tickets', { cookie: adminCookie })).payload.tickets.length, 1);
+  const review = await post('ticket-review', { ticketId, decision: 'approved', note: 'API 测试通过' }, adminCookie);
+  assert.equal(review.statusCode, 200); assert.equal(review.payload.ticket.execution.status, 'pending_configuration');
+  const me = await request('me', { cookie: playerCookie }); assert.equal(me.payload.user.notifications.length, 1);
+  const ack = await post('notifications-ack', { ids: me.payload.user.notifications.map(item => item.id) }, playerCookie);
+  assert.deepEqual(ack.payload.user.notifications, []);
+  await post('admin-command', { command: `ban inf API 测试封禁 ApiPlayer ${executionKey}` }, adminCookie);
+  assert.equal((await request('me', { cookie: playerCookie })).payload.code, 'SESSION_EXPIRED');
+  now += 60_000;
+  const banned = await post('login', { username: 'ApiPlayer', password: 'api-player-test-password', remember: true });
+  assert.equal(banned.statusCode, 403); assert.equal(banned.payload.code, 'ACCOUNT_BANNED'); assert.equal(banned.payload.ban.until, null);
+});

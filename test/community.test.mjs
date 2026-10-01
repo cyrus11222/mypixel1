@@ -48,7 +48,7 @@ async function setup() {
 test('legacy encrypted users gain binding fields without losing password hashes or existing sessions', async () => {
   const { remote, service } = await setup(); const auth = service();
   const before = (await remote.store().read()).users[0];
-  assert.deepEqual(await auth.session(tokenA), { username: 'Player0', gameBinding: null, developerCommunity: null });
+  assert.deepEqual(await auth.session(tokenA), { username: 'Player0', role: 'player', permissions: { adminCommands: false, reviewTickets: false }, notifications: [], gameBinding: null, developerCommunity: null });
   const bound = await auth.bindGame(tokenA, { gameId: '  开发者_Cafe\u0301-1  ', boundAt: 0, lockedUntil: 0, op: true });
   assert.deepEqual(bound.gameBinding, { gameId: '开发者_Café-1', boundAt: start, lockedUntil: start + GAME_BINDING_LOCK_MS });
   assert.deepEqual(await service().session(tokenA), bound);

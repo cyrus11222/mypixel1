@@ -3,7 +3,7 @@
 .brand-logo-frame img{position:absolute;width:80px;height:80px;max-width:none;left:50%;top:50%;transform:translate(-51.3%,-42.4%);object-fit:contain;filter:drop-shadow(0 2px 9px #f1bd3822)}
 .brand .brand-logo-frame{transition:transform .45s var(--ease,cubic-bezier(.22,1,.36,1))}
 .brand:hover .brand-logo-frame{transform:translateY(-2px)}
-.management-footer{margin-top:28px;padding-top:26px;border-top:1px solid var(--line);display:flex;align-items:center;gap:26px;padding-bottom:28px}
+.management-footer{margin-top:28px;padding-top:26px;border-top:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding-bottom:28px;text-align:center}
 .management-footer img{width:142px;height:142px;object-fit:contain;flex:none}
 .management-footer .management-label{margin:0 0 8px;font:11px Consolas,monospace;letter-spacing:2.5px;color:var(--muted)}
 .management-footer strong{font-size:17px;font-weight:600;letter-spacing:1px;color:var(--ink)}

@@ -13,7 +13,7 @@ process.chdir(root);
 process.env.AUTH_STORE ||= 'local';
 process.env.APP_ORIGIN ||= 'http://127.0.0.1:3000';
 process.env.RATE_LIMIT_SECRET ||= randomBytes(32).toString('hex');
-const assets = new Map(['auth.css', 'auth.js', 'account.js', 'community.css', 'brand.css', 'scene.jpg', 'mypixel-logo.png', 'skywolf-logo.png'].map(file => ['/assets/' + file, 'assets/' + file]));
+const assets = new Map(['auth.css', 'auth.js', 'account.js', 'community.css', 'operations.js', 'operations.css', 'brand.css', 'scene.jpg', 'mypixel-logo.png', 'skywolf-logo.png'].map(file => ['/assets/' + file, 'assets/' + file]));
 export function createDevServer() {
   return http.createServer(async (req,res) => {
     const pathname = new URL(req.url,'http://localhost').pathname;

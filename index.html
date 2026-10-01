@@ -26,13 +26,15 @@
 <link rel="stylesheet" href="assets/auth.css">
   <link rel="stylesheet" href="assets/brand.css">
   <link rel="stylesheet" href="assets/community.css">
-  <script src="assets/account.js" defer></script>
+  <link rel="stylesheet" href="assets/operations.css">
+  
+  <script src="assets/account.js" defer></script><script src="assets/operations.js" defer></script>
 </head>
 <body>
   <header class="nav"><div class="wrap nav-inner">
     <a class="brand" href="#home" aria-label="mypixel club 首页"><span class="brand-logo-frame"><img src="assets/mypixel-logo.png" alt="" width="1254" height="1254"></span><span>mypixel <span style="font-weight:400">club</span><small>A WORLD WE BUILD TOGETHER</small></span></a>
     <nav class="nav-links" aria-label="主导航"><a href="#home" data-view-link="home" aria-current="page">首页</a><a href="#developers" data-view-link="developers">玩家开发者社区</a><a href="#join">入服指南</a></nav>
-    <div class="account-actions"><button class="account-name" id="account-name" type="button" hidden aria-haspopup="dialog">用户中心</button><a id="account-login" class="account-login" href="/login">登录 / 注册</a><span id="account-status" class="account-status" aria-live="polite">游客浏览</span></div>
+    <div class="account-actions"><a id="review-entry" class="account-utility" href="#tickets" hidden>工单审批</a><button id="admin-entry" class="account-utility" type="button" hidden>Admin面板</button><button class="account-name" id="account-name" type="button" hidden aria-haspopup="dialog">用户中心</button><a id="account-login" class="account-login" href="/login">登录 / 注册</a><span id="account-status" class="account-status" aria-live="polite">游客浏览</span></div>
   </div></header>
   <main>
     <div id="home-view">
@@ -97,13 +99,19 @@
         <h2 id="community-about-title">一起创造，<br>也一起遵守规则。</h2>
         <p>这里是玩家之间交流创意、探索机械与分享开发兴趣的社区。加入玩家开发者社区不等于进入核心开发者社区，也不会直接获得 OP 或创造权限。</p>
         <div class="community-notes"><span>共同探索</span><span>平等游玩</span><span>遵守规则</span></div>
-        <div class="community-schedule"><span aria-hidden="true">◷</span><div><strong>权限申请审核时间 · 北京时间</strong><p>工作日 20:30—22:20<br>休息日全天（参照成都市安排）</p><small>工单系统稍后开放，当前暂不提供权限申请。</small></div></div>
+        <div class="community-schedule"><span aria-hidden="true">◷</span><div><strong>权限申请审核时间 · 北京时间</strong><p>工作日 20:30—22:20<br>休息日全天（参照成都市安排）</p><small>具体要求以加入时展示的最新社区协议为准。</small></div></div>
       </section>
     </div>
+    <section id="member-tickets" class="member-tickets" hidden aria-labelledby="member-tickets-title">
+      <div class="operations-heading"><div><p class="community-card-number">03 / REQUESTS</p><h2 id="member-tickets-title">申请支持，让创意继续。</h2></div><button id="own-tickets-refresh" class="operations-secondary" type="button">刷新记录</button></div>
+      <p class="operations-intro">提交用途和具体需求，由管理员或工单管理员审核。审批通过后将进入执行队列；只有游戏服务器确认成功，才会显示已执行。</p>
+      <div class="ticket-workspace"><form id="ticket-form" class="ticket-form"><label for="ticket-type">申请类型</label><select id="ticket-type" name="type"><option value="op">OP 权限</option><option value="creative">创造模式</option><option value="materials">物资申请</option></select><label for="ticket-purpose">用途说明</label><textarea id="ticket-purpose" name="purpose" rows="3" minlength="2" maxlength="1000" placeholder="说明项目内容、为什么需要这项支持，以及预期用途" required></textarea><div id="ticket-duration-fields"><label for="ticket-duration">申请时长（分钟）</label><input id="ticket-duration" type="number" min="1" max="525600" step="1" value="30"></div><div id="ticket-op-fields"><label for="ticket-op-level">OP 等级</label><select id="ticket-op-level"><option value="1">等级 1</option><option value="2" selected>等级 2</option><option value="3">等级 3</option><option value="4">等级 4</option></select></div><div id="ticket-world-fields"><label for="ticket-world">使用世界 / 区域</label><input id="ticket-world" type="text" maxlength="80" placeholder="填写服务器世界或使用区域"></div><div id="ticket-materials-fields" hidden><label for="ticket-materials">物资名称与数量</label><textarea id="ticket-materials" rows="3" maxlength="1000" placeholder="例如：铁锭 64 个、机械动力齿轮 16 个"></textarea></div><p id="ticket-form-message" class="community-message" role="status"></p><button id="ticket-submit" class="community-primary" type="submit">提交工单 ↗</button></form><div class="ticket-records"><h3>我的工单</h3><p id="own-tickets-message" class="community-message" role="status"></p><div id="own-tickets-list" class="ticket-list"><p class="operations-empty">暂时没有工单记录。</p></div></div></div>
+    </section>
     <p class="community-bottom-note">每一个好点子，都值得被认真对待。 / EVERY IDEA MATTERS.</p>
   </div>
 </section>
 
+    <section id="review-view" class="review-view wrap" hidden aria-labelledby="review-title"><div class="operations-heading"><div><p class="community-card-number">MYPIXEL / REVIEW DESK</p><h1 id="review-title">工单审批</h1></div><button id="review-refresh" class="operations-secondary" type="button">刷新队列</button></div><p class="operations-intro">核对玩家用途与申请内容后审批。通过审批与游戏内执行分别记录，未接入执行接口时不会标记为已发放。</p><p id="review-access-message" class="operations-empty" hidden>请使用具有工单审批权限的账户登录。</p><div id="review-tools"><label for="review-filter">查看</label><select id="review-filter"><option value="pending">待审核</option><option value="all">全部工单</option><option value="approved">已通过</option><option value="rejected">已拒绝</option></select></div><p id="review-message" class="community-message" role="status"></p><div id="review-list" class="ticket-list"></div></section>
   </main>
   <footer class="footer"><div class="wrap footer-inner"><a href="#home" class="brand"><span class="brand-logo-frame"><img src="assets/mypixel-logo.png" alt="" width="1254" height="1254"></span>mypixel club</a><p>© <span id="year">2026</span> mypixel club. 为每一份热爱而建。<br>本站为玩家社区网站，与 Mojang 或 Microsoft 无隶属关系。<br>场景素材：<a href="https://modrinth.com/modpack/remarkably-beautiful" target="_blank" rel="noopener noreferrer">Remarkably Beautiful</a> · 非本服实景</p></div><div class="wrap management-footer"><img src="assets/skywolf-logo.png" alt="Skywolf Technology · Tianlang" width="1254" height="1254" loading="lazy"><div><p class="management-label">COMMUNITY MANAGEMENT</p><strong>SKYWOLF TECHNOLOGY</strong><p>社区母公司及管理方</p></div></div></footer>
   
@@ -130,18 +138,21 @@
   <div class="uc-shell">
     <header class="uc-header"><div><p class="uc-kicker">COMMUNITY AGREEMENT</p><h2 id="agreement-title">玩家开发者社区协议</h2></div><button class="uc-close" type="button" data-dialog-close aria-label="关闭社区协议" autofocus>×</button></header>
     <p id="agreement-intro" class="agreement-intro">加入之前，请认真阅读以下约定。我们希望每位成员都能公平、自在地创造与游玩。</p>
-    <ol class="agreement-terms">
+    <div id="agreement-dynamic" class="agreement-dynamic" hidden></div><ol id="agreement-default-terms" class="agreement-terms">
       <li>加入玩家开发者社区不代表进入核心开发者社区。</li>
       <li>加入社区无解禁 / 免处罚功能，与普通玩家一样。</li>
       <li>开发者玩家不代表持久拥有 OP 权限（含创造），日常游玩时均为生存模式（创造服除外）。</li>
       <li>获得 OP、创造需向系统提交请求。系统工作日仅晚上 20:30—22:20 可审核，休息日全天可审核，休息日参照成都市安排。</li>
     </ol>
-    <p class="agreement-date">写于 2026/10/1 21:50 · 北京时间</p>
-    <p class="agreement-notice">加入社区不直接授予 OP 或创造权限。工单系统后续开放。</p>
+    <p id="agreement-version" class="agreement-date">正在读取最新社区协议…</p>
+    <p class="agreement-notice">加入社区不直接授予 OP 或创造权限。相关需求请在加入后通过工单提交。</p>
     <form id="agreement-form"><label class="agreement-consent"><input id="agreement-accept" type="checkbox" required><span>我已阅读并同意以上全部协议内容</span></label><p id="agreement-message" class="uc-message" role="status" aria-live="polite"></p><button id="agreement-submit" class="uc-primary agreement-submit" type="submit" disabled>同意协议并加入</button></form>
   </div>
 </dialog>
 
+  <dialog id="admin-dialog" class="account-dialog admin-dialog" aria-labelledby="admin-title"><div class="uc-shell"><header class="uc-header"><div><p class="uc-kicker">MYPIXEL ADMIN</p><h2 id="admin-title">管理命令台</h2></div><button class="uc-close" type="button" data-dialog-close aria-label="关闭管理命令台" autofocus>×</button></header><div class="admin-terminal"><div class="terminal-title"><span></span><span></span><span></span><p>mypixel / command prompt</p></div><div id="admin-output" class="admin-output" role="log" aria-live="polite"><p>mypixel club 管理命令台。输入 help 查看可用命令。</p><p>此处仅处理网站管理命令，不会执行系统 Shell。</p></div><form id="admin-form" autocomplete="off"><label class="terminal-prompt" for="admin-command">admindevs &gt;</label><textarea id="admin-command" rows="2" maxlength="6000" placeholder="help" autocomplete="off" autocapitalize="none" spellcheck="false" required></textarea><div id="admin-key-row" hidden><label for="admin-key">执行密钥</label><input id="admin-key" type="password" maxlength="256" autocomplete="off" placeholder="仅用于本次执行，不显示在命令记录中"></div><details class="admin-paste"><summary>粘贴带密钥的完整命令</summary><label for="admin-full-command">完整命令（自动拆分密钥并清空此框）</label><input id="admin-full-command" type="password" autocomplete="off" placeholder="在这里粘贴完整 ban 或 playerout 命令"></details><p id="admin-command-message" class="uc-message" role="status"></p><button id="admin-run" class="uc-primary" type="submit">执行命令 ↵</button></form></div></div></dialog>
+  <dialog id="delete-confirm-dialog" class="account-dialog delete-confirm-dialog" aria-labelledby="delete-confirm-title"><div class="uc-shell"><header class="uc-header"><div><p class="uc-kicker">CONFIRM DELETION</p><h2 id="delete-confirm-title">永久删除此玩家账户？</h2></div><button class="uc-close" type="button" data-dialog-close aria-label="取消删除" autofocus>×</button></header><p class="delete-confirm-copy">即将永久删除 <strong id="delete-confirm-target"></strong> 的网站账户、游戏绑定与社区身份，并立即撤销其登录会话。此操作无法撤销。</p><p id="delete-confirm-message" class="uc-message" role="status"></p><div class="delete-confirm-actions"><button id="delete-confirm-cancel" class="uc-secondary" type="button">取消</button><button id="delete-confirm-submit" class="uc-danger" type="button">确认永久删除</button></div></div></dialog>
+  <dialog id="notification-dialog" class="account-dialog notification-dialog" aria-labelledby="notification-title"><div class="uc-shell"><header class="uc-header"><div><p class="uc-kicker">ACCOUNT UPDATE</p><h2 id="notification-title">账户通知</h2></div><button class="uc-close" type="button" data-dialog-close aria-label="稍后查看通知" autofocus>×</button></header><div id="notification-list"></div><p id="notification-message" class="uc-message" role="status"></p><button id="notification-ack" class="uc-primary agreement-submit" type="button">我已知晓</button></div></dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script>
     (() => {
