@@ -58,7 +58,7 @@ test('GitHub creates user.txt, checks privacy, and merges a conflicting update',
  await store.mutate(db=>db.limits.push({key:'ours',count:1,resetAt:456}));
  assert.equal(writes,2);assert.deepEqual(JSON.parse(remote).limits.map(x=>x.key),['concurrent','ours']);
  const denied=new GitHubStore({owner:'test',repo:'public',branch:'main',token:'test-only',fetcher:async()=>Response.json({private:false})});
- await assert.rejects(()=>denied.mutate(()=>{}),/private repository/);
+ await assert.rejects(()=>denied.mutate(()=>{}),error=>error.code==='ACCOUNT_KEY_MISSING');
  let created;
  const fresh=new GitHubStore({owner:'test',repo:'new',branch:'main',token:'test-only',fetcher:async(url,opts)=>{
   if(!url.includes('/contents/'))return Response.json({private:true});

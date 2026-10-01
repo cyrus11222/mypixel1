@@ -7,7 +7,7 @@ import { settings, token, cookie, checkOrigin, failure } from '../lib/http.mjs';
 const productionOrigin = 'https://www.mypixel.com.cn';
 const environmentNames = [
   'VERCEL', 'AUTH_STORE', 'APP_ORIGIN', 'GITHUB_OWNER', 'GITHUB_REPO',
-  'GITHUB_BRANCH', 'GITHUB_TOKEN', 'RATE_LIMIT_SECRET', 'LOCAL_DATA_FILE'
+  'GITHUB_BRANCH', 'GITHUB_TOKEN', 'RATE_LIMIT_SECRET', 'DATA_ENCRYPTION_KEY', 'LOCAL_DATA_FILE'
 ];
 
 async function withEnvironment(values, run) {
@@ -130,7 +130,7 @@ test('production configuration and logged-out requests fail safely without expos
       await authHandler(request('login'), result);
       assert.equal(result.statusCode, 503);
       assert.equal(result.json().code, 'AUTH_CONFIG_MISSING');
-      for (const name of ['GITHUB_OWNER', 'GITHUB_REPO', 'GITHUB_TOKEN', 'RATE_LIMIT_SECRET']) {
+      for (const name of ['GITHUB_OWNER', 'GITHUB_REPO', 'GITHUB_TOKEN', 'RATE_LIMIT_SECRET', 'DATA_ENCRYPTION_KEY']) {
         assert.ok(result.text.includes(name), `Missing actionable configuration name: ${name}`);
       }
       assert.equal(result.json().user, undefined);
@@ -145,7 +145,8 @@ test('production configuration and logged-out requests fail safely without expos
       GITHUB_REPO: 'private-accounts',
       GITHUB_BRANCH: 'main',
       GITHUB_TOKEN: 'github-secret-sentinel',
-      RATE_LIMIT_SECRET: 'short-secret-sentinel'
+      RATE_LIMIT_SECRET: 'short-secret-sentinel',
+      DATA_ENCRYPTION_KEY: 'ab'.repeat(32)
     }, async () => {
       const result = response();
       await authHandler(request('register'), result);
@@ -158,6 +159,47 @@ test('production configuration and logged-out requests fail safely without expos
       }
       assert.equal(result.headers.has('set-cookie'), false);
     });
+  });
+
+  await t.test('encryption key is required even when all other production variables are set', async () => {
+    await withEnvironment({
+      APP_ORIGIN: productionOrigin,
+      GITHUB_OWNER: 'test-owner',
+      GITHUB_REPO: 'public-accounts',
+      GITHUB_TOKEN: 'github-secret-sentinel',
+      RATE_LIMIT_SECRET: 'rate-secret-sentinel-'.repeat(3)
+    }, async () => {
+      const result = response();
+      await authHandler(request('register'), result);
+      assert.equal(result.statusCode, 503);
+      assert.equal(result.json().code, 'AUTH_CONFIG_MISSING');
+      assert.deepEqual(result.json().fields, ['DATA_ENCRYPTION_KEY']);
+      assert.equal(result.headers.has('set-cookie'), false);
+    });
+  });
+
+  await t.test('malformed encryption keys report only their variable name', async () => {
+    for (const encryptionKey of ['key-secret-sentinel', 'ab'.repeat(31), 'gh'.repeat(32), 'ab'.repeat(33)]) {
+      await withEnvironment({
+        APP_ORIGIN: productionOrigin,
+        GITHUB_OWNER: 'test-owner',
+        GITHUB_REPO: 'public-accounts',
+        GITHUB_TOKEN: 'github-secret-sentinel',
+        RATE_LIMIT_SECRET: 'rate-secret-sentinel-'.repeat(3),
+        DATA_ENCRYPTION_KEY: encryptionKey
+      }, async () => {
+        const result = response();
+        await authHandler(request('register'), result);
+        assert.equal(result.statusCode, 503);
+        assert.equal(result.json().code, 'AUTH_CONFIG_INVALID');
+        assert.deepEqual(result.json().fields, ['DATA_ENCRYPTION_KEY']);
+        for (const secret of [encryptionKey, 'github-secret-sentinel', 'rate-secret-sentinel-'.repeat(3)]) {
+          assert.ok(!result.text.includes(secret));
+          assert.ok(!logs.join('\n').includes(secret));
+        }
+        assert.equal(result.headers.has('set-cookie'), false);
+      });
+    }
   });
 
   await t.test('origin failures never disclose raw origin credentials', async () => {
