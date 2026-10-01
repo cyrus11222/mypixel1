@@ -13,7 +13,7 @@ process.chdir(root);
 process.env.AUTH_STORE ||= 'local';
 process.env.APP_ORIGIN ||= 'http://127.0.0.1:3000';
 process.env.RATE_LIMIT_SECRET ||= randomBytes(32).toString('hex');
-const assets = new Map([['/login','login.html'],['/login.html','login.html'],['/assets/auth.css','assets/auth.css'],['/assets/auth.js','assets/auth.js'],['/assets/account.js','assets/account.js'],['/assets/scene.jpg','assets/scene.jpg']]);
+const assets = new Map(['auth.css', 'auth.js', 'account.js', 'community.css', 'brand.css', 'scene.jpg', 'mypixel-logo.png', 'skywolf-logo.png'].map(file => ['/assets/' + file, 'assets/' + file]));
 export function createDevServer() {
   return http.createServer(async (req,res) => {
     const pathname = new URL(req.url,'http://localhost').pathname;
@@ -23,7 +23,7 @@ export function createDevServer() {
       if (['/login','/login.html','/api/login'].includes(pathname)) return await login(req,res);
       if (assets.has(pathname) && ['GET','HEAD'].includes(req.method)) {
         const file = assets.get(pathname);
-        const types = {'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.jpg':'image/jpeg'};
+        const types = {'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.jpg':'image/jpeg','.png':'image/png'};
         res.setHeader('Content-Type',types[path.extname(file)]); res.setHeader('X-Content-Type-Options','nosniff');
         res.end(req.method === 'HEAD' ? '' : await readFile(path.join(root,file))); return;
       }

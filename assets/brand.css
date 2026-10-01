@@ -1,0 +1,12 @@
+/* Keep the supplied transparent PNGs intact; frame their transparent margins. */
+.brand-logo-frame{position:relative;display:inline-block;flex:0 0 44px;width:44px;height:56px;overflow:hidden}
+.brand-logo-frame img{position:absolute;width:80px;height:80px;max-width:none;left:50%;top:50%;transform:translate(-51.3%,-42.4%);object-fit:contain;filter:drop-shadow(0 2px 9px #f1bd3822)}
+.brand .brand-logo-frame{transition:transform .45s var(--ease,cubic-bezier(.22,1,.36,1))}
+.brand:hover .brand-logo-frame{transform:translateY(-2px)}
+.management-footer{margin-top:28px;padding-top:26px;border-top:1px solid var(--line);display:flex;align-items:center;gap:26px;padding-bottom:28px}
+.management-footer img{width:142px;height:142px;object-fit:contain;flex:none}
+.management-footer .management-label{margin:0 0 8px;font:11px Consolas,monospace;letter-spacing:2.5px;color:var(--muted)}
+.management-footer strong{font-size:17px;font-weight:600;letter-spacing:1px;color:var(--ink)}
+.management-footer p:last-child{margin:8px 0 0;color:var(--muted);font-size:13px;line-height:1.8}
+@media(max-width:680px){.brand-logo-frame{flex-basis:32px;width:32px;height:43px}.brand-logo-frame img{width:59px;height:59px}.management-footer{gap:15px;margin-top:22px;padding-top:20px}.management-footer img{width:106px;height:106px}.management-footer strong{font-size:13px}.management-footer .management-label{font-size:9px;letter-spacing:1.5px}}
+@media(prefers-reduced-motion:reduce){.brand .brand-logo-frame{transition:none}.brand:hover .brand-logo-frame{transform:none}}

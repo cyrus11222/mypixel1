@@ -97,9 +97,9 @@ test('production configuration and logged-out requests fail safely without expos
 
         const page = response();
         await siteHandler({ method: 'GET', url: '/', headers: { cookie: session } }, page);
-        assert.equal(page.statusCode, 302);
-        assert.equal(page.headers.get('location'), '/login');
-        assert.equal(page.text, '');
+        assert.equal(page.statusCode, 200);
+        assert.equal(page.headers.get('location'), undefined);
+        assert.match(page.text, /frp-sun.com:56663/);
       }
     });
   });

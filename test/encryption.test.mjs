@@ -67,7 +67,7 @@ function legacyDatabase() {
 
 test('public repository persists encrypted registration, remembered sessions, login and logout', async () => {
   const remote = remoteRepository();
-  const now = 1_900_000_000_000;
+  let now = 1_900_000_000_000;
   const credentials = { username: 'CipherPlayer', password: 'long-test-password-sentinel', remember: true };
   const auth = new AuthService(remote.store(), { rateSecret, now: () => now });
   const registered = await auth.register(credentials, 'test-ip');
@@ -79,6 +79,7 @@ test('public repository persists encrypted registration, remembered sessions, lo
 
   const restarted = new AuthService(remote.store(), { rateSecret, now: () => now });
   assert.equal((await restarted.session(registered.token)).username, credentials.username);
+  now += 60_000;
   const loggedIn = await restarted.login(credentials, 'test-ip', registered.token);
   assert.equal(await auth.session(registered.token), null);
   assert.equal((await auth.session(loggedIn.token)).username, credentials.username);

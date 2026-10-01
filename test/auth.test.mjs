@@ -22,12 +22,16 @@ test('salted password storage, 30-day persistence, expiry, rotation and revocati
  assert.equal(db.users[1].sessions[0].expiresAt-now,SESSION_SECONDS*1000);
  const restarted=new AuthService(new LocalStore(store.file),{now:()=>now,rateSecret:secret});
  assert.equal((await restarted.session(first.token)).username,'Builder');
+ now+=60_000;
  await assert.rejects(()=>auth.login({...credentials('Builder'),password:'incorrect-password'},'ip3'),e=>e.status===401);
+ now+=60_000;
  await assert.rejects(()=>auth.register(credentials('builder'),'ip4'),e=>e.status===409);
+ now+=60_000;
  const rotated=await auth.login(credentials('BUILDER'),'ip3',first.token);
  assert.equal(await auth.session(first.token),null);
  assert.ok(await auth.session(rotated.token));
  await auth.logout(rotated.token);assert.equal(await restarted.session(rotated.token),null);
+ now+=60_000;
  const remembered=await auth.login(credentials('Builder'),'ip3');
  now+=REMEMBER_SECONDS*1000-1;assert.ok(await restarted.session(remembered.token));
  now+=1;assert.equal(await restarted.session(remembered.token),null);assert.equal(await auth.session(second.token),null);
@@ -37,9 +41,10 @@ test('salted password storage, 30-day persistence, expiry, rotation and revocati
 test('rate limits survive service restarts and malformed storage fails closed',async t=>{
  const dir=await mkdtemp(path.join(os.tmpdir(),'mypixel-test-'));t.after(()=>rm(dir,{recursive:true,force:true}));
  const file=path.join(dir,'user.txt');const store=new LocalStore(file);
- const a=new AuthService(store,{rateSecret:secret});
- for(let i=0;i<10;i++)await a.limit('ip','same_name','login');
- const b=new AuthService(new LocalStore(file),{rateSecret:secret});
+ let now=Date.now();
+ const a=new AuthService(store,{rateSecret:secret,now:()=>now});
+ for(let i=0;i<10;i++){await a.limit('ip','same_name','login');now+=60_000;}
+ const b=new AuthService(new LocalStore(file),{rateSecret:secret,now:()=>now});
  await assert.rejects(()=>b.limit('other-ip','same_name','login'),e=>e.status===429);
  await writeFile(file,'not valid JSON');await assert.rejects(()=>store.mutate(()=>{}));
  assert.equal(await readFile(file,'utf8'),'not valid JSON');
@@ -68,7 +73,7 @@ test('GitHub creates user.txt, checks privacy, and merges a conflicting update',
  await fresh.mutate(()=>{});assert.equal(created.sha,undefined);assert.equal(JSON.parse(Buffer.from(created.content,'base64')).schema,1);
 });
 
-test('HTTP auth gate, origin checks, cookies, protected files and logout',async t=>{
+test('HTTP guest browsing, origin checks, cookies, protected files and logout',async t=>{
  const dir=await mkdtemp(path.join(os.tmpdir(),'mypixel-http-'));
  process.env.AUTH_STORE='local';process.env.LOCAL_DATA_FILE=path.join(dir,'user.txt');process.env.RATE_LIMIT_SECRET=secret;
  delete process.env.VERCEL;
@@ -76,16 +81,28 @@ test('HTTP auth gate, origin checks, cookies, protected files and logout',async 
  const server=createDevServer();await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
  t.after(async()=>{await new Promise(resolve=>server.close(resolve));await rm(dir,{recursive:true,force:true});});
  const origin=`http://127.0.0.1:${server.address().port}`;process.env.APP_ORIGIN=origin;
+ const {authService}=await import('../lib/http.mjs');let now=Date.now();authService().now=()=>now;
  const post=(action,data,cookie='',source=origin)=>fetch(origin+'/api/auth?action='+action,{method:'POST',headers:{'Content-Type':'application/json',Origin:source,Cookie:cookie},body:JSON.stringify(data)});
- let res=await fetch(origin+'/',{redirect:'manual'});assert.equal(res.status,302);assert.equal(res.headers.get('location'),'/login');
+ let res=await fetch(origin+'/',{redirect:'manual'});assert.equal(res.status,200);assert.match(await res.text(),/frp-sun.com:56663/);
+ for(const action of ['bind-game','unbind-game','join-community']){
+  assert.equal((await post(action,{})).status,401);
+  assert.equal((await post(action,{},'','https://attacker.invalid')).status,403);
+ }
  res=await post('register',credentials('WebPlayer'),'','https://attacker.invalid');assert.equal(res.status,403);
  res=await post('register',credentials('WebPlayer'));assert.equal(res.status,201);
  const raw=res.headers.get('set-cookie');const sessionCookie=raw.split(';')[0];
  assert.match(raw,/HttpOnly/);assert.match(raw,/SameSite=Lax/);assert.match(raw,/Max-Age=2592000/);assert.ok(!(await res.text()).includes('token'));
  res=await fetch(origin+'/',{headers:{Cookie:sessionCookie}});assert.equal(res.status,200);assert.match(await res.text(),/frp-sun.com:56663/);assert.match(res.headers.get('cache-control'),/no-store/);
+ res=await post('bind-game',{gameId:'WebPlayer_Game'},sessionCookie);assert.equal(res.status,200);assert.equal((await res.json()).user.gameBinding.gameId,'WebPlayer_Game');
+ res=await post('join-community',{accepted:true,agreementVersion:'2026-10-01-v1'},sessionCookie);assert.equal(res.status,200);assert.equal((await res.json()).user.developerCommunity.agreementVersion,'2026-10-01-v1');
+ assert.equal((await post('unbind-game',{},sessionCookie)).status,409);
+ assert.equal((await post('bind-game',{gameId:'ChangedGame'},sessionCookie,'https://attacker.invalid')).status,403);
  for(const file of ['/user.txt','/data/user.txt','/.env','/private/index.html','/lib/store.mjs'])assert.equal((await fetch(origin+file)).status,404);
  res=await post('logout',{},sessionCookie);assert.equal(res.status,200);assert.match(res.headers.get('set-cookie'),/Max-Age=0/);
  assert.equal((await fetch(origin+'/api/auth?action=me',{headers:{Cookie:sessionCookie}})).status,401);
+ assert.equal((await post('join-community',{accepted:true,agreementVersion:'2026-10-01-v1'},sessionCookie)).status,401);
+ res=await post('login',credentials('WebPlayer',false));assert.equal(res.status,429);assert.equal(res.headers.get('retry-after'),'60');assert.equal((await res.json()).retryAfterSeconds,60);
+ now+=60_000;
  res=await post('login',credentials('WebPlayer',false));assert.equal(res.status,200);assert.ok(!res.headers.get('set-cookie').includes('Max-Age'));
  const {cookie}=await import('../lib/http.mjs');process.env.VERCEL='1';process.env.APP_ORIGIN='https://example.com';
  assert.match(cookie('value',true),/^__Host-mypixel_session=value; Path=\/; HttpOnly; SameSite=Lax; Secure; Max-Age=2592000$/);

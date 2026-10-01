@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#101c18">
   <meta name="description" content="mypixel club — 纯创造机械动力服务器。在创造模式中搭建机械，让想象转动起来。服务器地址：frp-sun.com:56663。">
   <title>mypixel club · 纯创造机械动力服务器</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23101c18'/%3E%3Cpath d='M6 24V8h6v5h8V8h6v16h-6v-6h-8v6z' fill='%23c4f477'/%3E%3C/svg%3E">
+  <link rel="icon" type="image/png" href="assets/mypixel-logo.png">
   <script>
     /* 在这里填写你的真实服务器信息；保存后重新打开即可生效。
        address: 'play.example.com', edition: 'Java 版', version: '1.21.x'
@@ -23,15 +23,19 @@
     @media(max-width:680px){.wrap{width:calc(100% - 40px)}.nav-inner{height:84px;gap:10px}.brand{font-size:19px;gap:9px}.brand small{font-size:10px}.mark{width:29px;height:29px}.nav-links{display:none}.nav-join{font-size:12px;padding:10px 13px}.hero{min-height:730px;height:94svh;max-height:900px}.hero-content{padding-top:190px}.hero:before{background:linear-gradient(90deg,#0b1b13ca,#0b1b1344),linear-gradient(0deg,#101c18,transparent 48%)}.landscape{background-position:63% center}.eyebrow{font-size:10px;letter-spacing:2px}h1{font-size:clamp(42px,11vw,68px);letter-spacing:-2.5px;margin:25px 0}.intro{font-size:15px;line-height:1.9;max-width:315px}.hero-actions{gap:23px;margin-top:30px}.btn{gap:25px;padding:16px 20px;font-size:14px;min-height:54px}.text-link{font-size:13px;gap:8px}.hero-bottom{bottom:33px}.world-label{font-size:10px;letter-spacing:1px;gap:10px}.world-label b{width:26px;height:26px}.scroll{font-size:10px;gap:9px;letter-spacing:1px}.ticker{padding:18px 0}.ticker-inner{gap:12px;font-size:10px;letter-spacing:1px;flex-wrap:wrap;justify-content:center}.ticker-inner em{font-size:12px}.ticker-inner .last{display:none}.section{padding:66px 0}.section-top{display:block;margin-bottom:32px}.section-top>p{margin-top:23px;font-size:14px;max-width:100%}.section-kicker{font-size:11px;letter-spacing:2px;margin-bottom:18px}.features{grid-template-columns:1fr}.feature,.feature:first-child{padding:28px 0}.feature+.feature{border-left:0;border-top:1px solid var(--line)}.feature-head{margin:16px 0 12px}.feature h3{font-size:23px}.feature p{max-width:100%;font-size:14px}.feature-tag{margin-top:20px}.join{padding-top:0;padding-bottom:55px}.join-box{grid-template-columns:1fr;padding:30px 23px;gap:30px}.join h2{font-size:34px}.join-desc{font-size:14px;margin-top:18px}.server-box{padding:23px 20px}.server-address{font-size:20px}.guide{grid-template-columns:1fr;gap:15px;margin-top:25px}.guide-title{font-size:14px}.guide-title strong{font-size:20px}.footer-inner{align-items:flex-start;flex-direction:column;gap:18px}.footer p{text-align:left;font-size:11px}.footer{padding:30px 0}}
     @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{animation:none!important;transition:none!important}.motion .reveal{opacity:1;transform:none}.landscape{will-change:auto}#motes{display:none}}
   </style>
-<link rel="stylesheet" href="assets/auth.css"><script src="assets/account.js" defer></script>
+<link rel="stylesheet" href="assets/auth.css">
+  <link rel="stylesheet" href="assets/brand.css">
+  <link rel="stylesheet" href="assets/community.css">
+  <script src="assets/account.js" defer></script>
 </head>
 <body>
   <header class="nav"><div class="wrap nav-inner">
-    <a class="brand" href="#home" aria-label="mypixel club 首页"><svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M2 28V4h8v7h12V4h8v24h-8V18H10v10z"/></svg><span>mypixel <span style="font-weight:400">club</span><small>A WORLD WE BUILD TOGETHER</small></span></a>
-    <nav class="nav-links" aria-label="主导航"><a href="#home">首页</a><a href="#about">我们的世界</a><a href="#join">加入指南</a></nav>
-    <div class="account-actions"><span class="account-name" id="account-name" aria-live="polite">已登录</span><button class="account-logout" id="account-logout" type="button">退出</button></div>
+    <a class="brand" href="#home" aria-label="mypixel club 首页"><span class="brand-logo-frame"><img src="assets/mypixel-logo.png" alt="" width="1254" height="1254"></span><span>mypixel <span style="font-weight:400">club</span><small>A WORLD WE BUILD TOGETHER</small></span></a>
+    <nav class="nav-links" aria-label="主导航"><a href="#home" data-view-link="home" aria-current="page">首页</a><a href="#developers" data-view-link="developers">玩家开发者社区</a><a href="#join">入服指南</a></nav>
+    <div class="account-actions"><button class="account-name" id="account-name" type="button" hidden aria-haspopup="dialog">用户中心</button><a id="account-login" class="account-login" href="/login">登录 / 注册</a><span id="account-status" class="account-status" aria-live="polite">游客浏览</span></div>
   </div></header>
   <main>
+    <div id="home-view">
     <section class="hero" id="home" aria-labelledby="hero-title">
       <div class="landscape" id="landscape" role="img" aria-label="方块森林、山谷与河流组成的 Minecraft 风格世界"></div><canvas id="motes" aria-hidden="true"></canvas>
       <div class="wrap hero-content">
@@ -56,8 +60,88 @@
       <div class="join-box reveal"><div><p class="section-kicker">02 / YOUR NEXT CHAPTER</p><h2 id="join-title">世界很大，<br>给你留了一块。</h2><p class="join-desc">带上你的设计灵感，我们在机械工坊见。<br>加入纯创造机械动力服务器，搭建你的下一件作品。</p><a id="community" class="community-link" hidden>前往玩家社群 ↗</a></div><div class="server-box"><div class="server-header"><span>SERVER ADDRESS</span><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="7" rx="1"/><rect x="3" y="14" width="18" height="7" rx="1"/><path d="M6 6.5h2m-2 11h2m4-11h6m-6 11h6"/></svg></div><strong class="server-address" id="address">frp-sun.com:56663</strong><p class="server-meta" id="server-meta">纯创造 · 机械动力｜客户端版本与模组配置请查看服务器公告。</p><button id="copy" class="copy-btn" disabled>复制服务器地址 ↗</button></div></div>
       <div class="guide reveal"><div class="guide-title"><strong>搭建前的小提示</strong>准备妥当，再一起创造。</div><div><details class="faq"><summary>如何加入服务器？</summary><p id="join-help">先按服务器公告准备匹配的 Minecraft 客户端及模组配置，再在多人游戏中添加服务器，输入 frp-sun.com:56663。具体游戏版本、机械动力版本及其他加入条件，请以服主公告为准。</p></details><details class="faq"><summary>第一次来到这里，需要注意什么？</summary><p>请先阅读服务器内的公告与规则。尊重其他玩家的建筑和物品，友善交流；遇到问题时，联系服务器管理员。</p></details></div></div>
     </section>
+    </div>
+    <!-- COMMUNITY VIEW: insert inside main -->
+<section id="community-view" class="community-view" hidden aria-labelledby="community-title">
+  <div class="wrap">
+    <div class="community-intro">
+      <div class="community-heading">
+        <p class="community-kicker"><span></span> M Y P I X E L · C R E A T O R S</p>
+        <h1 id="community-title">让创意相遇。<br>让<span>热爱</span>发生。</h1>
+        <p class="community-description">玩家开发者社区</p>
+        <p class="community-lead">从一座精巧的机械，到一个更有趣的世界。<br>欢迎每一位乐于探索、交流与创造的玩家。</p>
+        <span id="community-member-badge" class="community-member-badge" hidden>✦ 已加入 · 玩家开发者社区</span>
+      </div>
+      <div class="community-art" aria-hidden="true">
+        <div class="community-orbit community-orbit-one"></div><div class="community-orbit community-orbit-two"></div>
+        <div class="community-cube"><span>&lt; / &gt;</span></div>
+        <span class="community-art-label community-art-label-one">BUILD TOGETHER</span><span class="community-art-label community-art-label-two">IDEAS → REALITY</span>
+        <span class="community-particle community-particle-one"></span><span class="community-particle community-particle-two"></span><span class="community-particle community-particle-three"></span>
+      </div>
+    </div>
+    <div class="community-grid">
+      <section class="community-entry" aria-labelledby="community-entry-title">
+        <div class="community-card-heading"><span class="community-card-number">01 / JOIN US</span><span class="community-open-label">开放加入</span></div>
+        <h2 id="community-entry-title">成为创造的一份子</h2>
+        <p class="community-card-copy">完成下面两步，阅读并同意社区协议，即可加入。</p>
+        <ol class="community-requirements">
+          <li id="requirement-account" data-complete="false"><span class="community-check" aria-hidden="true">01</span><div><strong>登录网站账户</strong><p id="requirement-account-text">使用 mypixel club 账户登录</p></div></li>
+          <li id="requirement-game" data-complete="false"><span class="community-check" aria-hidden="true">02</span><div><strong>绑定游戏账号</strong><p id="requirement-game-text">在用户中心填写完整游戏 ID</p></div></li>
+        </ol>
+        <button id="community-join" class="community-primary" type="button">登录后加入社区 ↗</button>
+        <p id="community-message" class="community-message" role="status" aria-live="polite"></p>
+        <p id="community-member-since" class="community-member-since" hidden></p>
+      </section>
+      <section class="community-about" aria-labelledby="community-about-title">
+        <span class="community-card-number">02 / OUR COMMUNITY</span>
+        <h2 id="community-about-title">一起创造，<br>也一起遵守规则。</h2>
+        <p>这里是玩家之间交流创意、探索机械与分享开发兴趣的社区。加入玩家开发者社区不等于进入核心开发者社区，也不会直接获得 OP 或创造权限。</p>
+        <div class="community-notes"><span>共同探索</span><span>平等游玩</span><span>遵守规则</span></div>
+        <div class="community-schedule"><span aria-hidden="true">◷</span><div><strong>权限申请审核时间 · 北京时间</strong><p>工作日 20:30—22:20<br>休息日全天（参照成都市安排）</p><small>工单系统稍后开放，当前暂不提供权限申请。</small></div></div>
+      </section>
+    </div>
+    <p class="community-bottom-note">每一个好点子，都值得被认真对待。 / EVERY IDEA MATTERS.</p>
+  </div>
+</section>
+
   </main>
-  <footer class="footer"><div class="wrap footer-inner"><a href="#home" class="brand"><svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M2 28V4h8v7h12V4h8v24h-8V18H10v10z"/></svg>mypixel club</a><p>© <span id="year">2026</span> mypixel club. 为每一份热爱而建。<br>本站为玩家社区网站，与 Mojang 或 Microsoft 无隶属关系。<br>场景素材：<a href="https://modrinth.com/modpack/remarkably-beautiful" target="_blank" rel="noopener noreferrer">Remarkably Beautiful</a> · 非本服实景</p></div></footer>
+  <footer class="footer"><div class="wrap footer-inner"><a href="#home" class="brand"><span class="brand-logo-frame"><img src="assets/mypixel-logo.png" alt="" width="1254" height="1254"></span>mypixel club</a><p>© <span id="year">2026</span> mypixel club. 为每一份热爱而建。<br>本站为玩家社区网站，与 Mojang 或 Microsoft 无隶属关系。<br>场景素材：<a href="https://modrinth.com/modpack/remarkably-beautiful" target="_blank" rel="noopener noreferrer">Remarkably Beautiful</a> · 非本服实景</p></div><div class="wrap management-footer"><img src="assets/skywolf-logo.png" alt="Skywolf Technology · Tianlang" width="1254" height="1254" loading="lazy"><div><p class="management-label">COMMUNITY MANAGEMENT</p><strong>SKYWOLF TECHNOLOGY</strong><p>社区母公司及管理方</p></div></div></footer>
+  
+<dialog id="user-center" class="account-dialog user-center" aria-labelledby="user-center-title">
+  <div class="uc-shell">
+    <header class="uc-header"><div><p class="uc-kicker">MYPIXEL ACCOUNT</p><h2 id="user-center-title">用户中心</h2></div><button class="uc-close" type="button" data-dialog-close aria-label="关闭用户中心" autofocus>×</button></header>
+    <div class="uc-profile"><span id="profile-initial" class="uc-avatar" aria-hidden="true">M</span><div><h3 id="profile-username">游客</h3><p>你的创造，从这里开始。</p></div><span class="uc-account-badge">网站账户</span></div>
+    <section class="uc-section" aria-labelledby="binding-title"><div class="uc-section-heading"><h3 id="binding-title">游戏账号</h3><span class="uc-small-label">MINECRAFT</span></div><p id="game-binding-status" class="uc-binding-status">尚未绑定游戏账号</p>
+      <form id="game-binding-form">
+        <label class="uc-label" for="game-id">完整游戏 ID</label>
+        <div class="uc-game-input"><input id="game-id" name="gameId" type="text" placeholder="输入你在游戏中的完整 ID" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="64" required aria-describedby="game-id-hint game-lock-status"><button id="game-bind" class="uc-primary" type="submit">绑定游戏账号</button></div>
+        <p id="game-id-hint" class="uc-hint">游戏 ID 支持 3–32 个字符，可包含文字、数字、空格、下划线、点或连字符。此处为自主登记，不代表 Microsoft 或 Minecraft 官方身份验证。</p>
+        <p id="game-lock-status" class="uc-lock-note">绑定成功后，30 天内不可修改或删除。请核对完整游戏 ID 后提交。</p>
+      </form>
+      <button id="game-unbind" class="uc-text-button" type="button" hidden>解除绑定</button>
+      <div id="game-unbind-confirm" class="uc-unbind-confirm" hidden><p>解除绑定会同时取消玩家开发者社区成员资格。确定继续吗？</p><div><button id="game-unbind-no" class="uc-secondary" type="button">保留绑定</button><button id="game-unbind-yes" class="uc-danger" type="button">确认解除绑定</button></div></div>
+    </section>
+    <section class="uc-section uc-member-section" aria-labelledby="membership-title"><div class="uc-section-heading"><h3 id="membership-title">社区身份</h3><span aria-hidden="true">✦</span></div><strong id="profile-membership">尚未加入玩家开发者社区</strong><p id="profile-membership-detail">登录并绑定游戏 ID 后，即可阅读协议并申请加入。</p><a id="profile-community-link" class="uc-community-link" href="#developers">前往玩家开发者社区 ↗</a></section>
+    <p id="profile-message" class="uc-message" role="status" aria-live="polite"></p>
+    <footer class="uc-footer"><span>mypixel club · 创意不设限</span><button id="account-logout" class="uc-text-button" type="button">退出登录</button></footer>
+  </div>
+</dialog>
+<dialog id="community-agreement" class="account-dialog community-agreement" aria-labelledby="agreement-title" aria-describedby="agreement-intro">
+  <div class="uc-shell">
+    <header class="uc-header"><div><p class="uc-kicker">COMMUNITY AGREEMENT</p><h2 id="agreement-title">玩家开发者社区协议</h2></div><button class="uc-close" type="button" data-dialog-close aria-label="关闭社区协议" autofocus>×</button></header>
+    <p id="agreement-intro" class="agreement-intro">加入之前，请认真阅读以下约定。我们希望每位成员都能公平、自在地创造与游玩。</p>
+    <ol class="agreement-terms">
+      <li>加入玩家开发者社区不代表进入核心开发者社区。</li>
+      <li>加入社区无解禁 / 免处罚功能，与普通玩家一样。</li>
+      <li>开发者玩家不代表持久拥有 OP 权限（含创造），日常游玩时均为生存模式（创造服除外）。</li>
+      <li>获得 OP、创造需向系统提交请求。系统工作日仅晚上 20:30—22:20 可审核，休息日全天可审核，休息日参照成都市安排。</li>
+    </ol>
+    <p class="agreement-date">写于 2026/10/1 21:50 · 北京时间</p>
+    <p class="agreement-notice">加入社区不直接授予 OP 或创造权限。工单系统后续开放。</p>
+    <form id="agreement-form"><label class="agreement-consent"><input id="agreement-accept" type="checkbox" required><span>我已阅读并同意以上全部协议内容</span></label><p id="agreement-message" class="uc-message" role="status" aria-live="polite"></p><button id="agreement-submit" class="uc-primary agreement-submit" type="submit" disabled>同意协议并加入</button></form>
+  </div>
+</dialog>
+
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script>
     (() => {
