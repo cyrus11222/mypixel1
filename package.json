@@ -6,6 +6,9 @@
   "engines": {
     "node": "24.x"
   },
+  "dependencies": {
+    "@simplewebauthn/server": "14.0.3"
+  },
   "scripts": {
     "start": "node --env-file-if-exists=.env dev.mjs",
     "test": "node --test test/*.test.mjs",

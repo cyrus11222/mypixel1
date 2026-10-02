@@ -33,14 +33,14 @@ test('admin and ticket HTTP routes enforce origin, session, body contracts and s
   }
   const loggedIn = await post('login', { username: 'admindevs', password: adminPassword, remember: true });
   assert.equal(loggedIn.statusCode, 200); assert.equal(loggedIn.payload.user.role, 'admin');
-  const adminCookie = loggedIn.headers['set-cookie'].split(';')[0];
+  const adminCookie = loggedIn.headers['set-cookie'][0].split(';')[0];
   assert.equal((await request('admin-state', { cookie: adminCookie })).statusCode, 200);
   assert.equal((await post('bind-game', { gameId: 'AdminGame' }, adminCookie)).statusCode, 403);
   const updated = await post('admin-command', { command: 'setintty devplayer API 测试协议' }, adminCookie);
   assert.equal(updated.statusCode, 200); assert.equal((await request('public-config')).payload.agreement.content, 'API 测试协议');
   now += 60_000;
   const player = await post('register', { username: 'ApiPlayer', password: 'api-player-test-password', remember: true }); assert.equal(player.statusCode, 201);
-  const playerCookie = player.headers['set-cookie'].split(';')[0];
+  const playerCookie = player.headers['set-cookie'][0].split(';')[0];
   assert.equal((await request('admin-state', { cookie: playerCookie })).statusCode, 403);
   await post('bind-game', { gameId: 'ApiPlayerGame' }, playerCookie);
   await post('join-community', { accepted: true, agreementVersion: updated.payload.agreement.version }, playerCookie);

@@ -1,5 +1,10 @@
 import { AuthError, AUTH_COOLDOWN_SECONDS } from '../lib/auth.mjs';
-import { authService, body, checkOrigin, clientIp, cookie, failure, json, token } from '../lib/http.mjs';
+import { authService, body, checkOrigin, clientIp, cookie, device, failure, json, loginCookies, passkeyBinding, passkeyCookie, settings, token } from '../lib/http.mjs';
+
+async function passkeys(auth) {
+  const { PasskeyService } = await import('../lib/passkeys.mjs');
+  return new PasskeyService(auth, { origin: settings().origin });
+}
 
 export default async function handler(req, res) {
   try {
@@ -10,6 +15,10 @@ export default async function handler(req, res) {
       return json(res, user ? 200 : 401, user ? { user } : { error: sessionToken ? '登录已失效，请重新登录。' : '请先登录。', code: sessionToken ? 'SESSION_EXPIRED' : 'AUTH_REQUIRED' });
     }
     if (req.method === 'GET' && action === 'public-config') return json(res, 200, await authService().publicConfig());
+    if (req.method === 'GET' && action === 'passkeys') {
+      if (!token(req)) throw new AuthError(401, '请先登录后再操作。');
+      return json(res, 200, await (await passkeys(authService())).list(token(req)));
+    }
     if (req.method === 'GET' && ['tickets', 'review-tickets', 'admin-state'].includes(action)) {
       if (!token(req)) throw new AuthError(401, '请先登录后再操作。');
       const auth = authService();
@@ -18,10 +27,30 @@ export default async function handler(req, res) {
     }
     if (req.method !== 'POST') { res.setHeader('Allow', 'GET, POST'); throw new AuthError(405, '不支持此请求方法。'); }
     checkOrigin(req);
-    if (!['login', 'register', 'logout', 'bind-game', 'unbind-game', 'join-community', 'notifications-ack', 'admin-command', 'ticket-create', 'ticket-review'].includes(action)) throw new AuthError(404, '接口不存在。');
+    if (!['login', 'register', 'logout', 'bind-game', 'unbind-game', 'join-community', 'notifications-ack', 'admin-command', 'ticket-create', 'ticket-review', 'passkey-register-options', 'passkey-register-verify', 'passkey-auth-options', 'passkey-auth-verify', 'passkey-remove'].includes(action)) throw new AuthError(404, '接口不存在。');
     const input = await body(req);
-    if (!['login', 'register', 'logout'].includes(action) && !token(req)) throw new AuthError(401, '请先登录后再操作。');
+    if (!['login', 'register', 'logout', 'passkey-auth-options', 'passkey-auth-verify'].includes(action) && !token(req)) throw new AuthError(401, '请先登录后再操作。');
     const auth = authService();
+    const context = { deviceToken: device(req), userAgent: req.headers['user-agent'] || '' };
+    if (action.startsWith('passkey-')) {
+      const service = await passkeys(auth);
+      if (action === 'passkey-register-options' || action === 'passkey-auth-options') {
+        const result = action === 'passkey-register-options' ? await service.registrationOptions(token(req), input, { ip: clientIp(req) }) : await service.authenticationOptions(input, { ip: clientIp(req) });
+        res.setHeader('Set-Cookie', passkeyCookie(result.bindingToken));
+        return json(res, 200, { options: result.options });
+      }
+      if (action === 'passkey-register-verify') {
+        const result = await service.verifyRegistration(token(req), input, passkeyBinding(req));
+        res.setHeader('Set-Cookie', passkeyCookie('', true));
+        return json(res, 200, result);
+      }
+      if (action === 'passkey-auth-verify') {
+        const result = await service.verifyAuthentication(input, passkeyBinding(req), { ...context, previousToken: token(req) });
+        res.setHeader('Set-Cookie', [...loginCookies(result), passkeyCookie('', true)]);
+        return json(res, 200, { user: result.user });
+      }
+      return json(res, 200, await service.remove(token(req), input, { ip: clientIp(req) }));
+    }
     if (action === 'bind-game') return json(res, 200, { user: await auth.bindGame(token(req), input) });
     if (action === 'unbind-game') return json(res, 200, { user: await auth.unbindGame(token(req)) });
     if (action === 'join-community') return json(res, 200, { user: await auth.joinCommunity(token(req), input) });
@@ -34,8 +63,8 @@ export default async function handler(req, res) {
       res.setHeader('Set-Cookie', cookie('', false, true));
       return json(res, 200, { ok: true });
     }
-    const result = action === 'register' ? await auth.register(input, clientIp(req)) : await auth.login(input, clientIp(req), token(req));
-    res.setHeader('Set-Cookie', cookie(result.token, result.remember));
+    const result = action === 'register' ? await auth.register(input, clientIp(req), context) : await auth.login(input, clientIp(req), token(req), context);
+    res.setHeader('Set-Cookie', loginCookies(result));
     return json(res, action === 'register' ? 201 : 200, { user: result.user, cooldownSeconds: AUTH_COOLDOWN_SECONDS });
   } catch (error) { failure(res, error); }
 }

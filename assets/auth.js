@@ -43,6 +43,7 @@
     const remaining = remainingSeconds();
     const cooling = remaining > 0;
     $('submit').disabled = $('tab-login').disabled = $('tab-register').disabled = busy || cooling;
+    $('passkey-login').disabled = busy || cooling;
     $('submit').dataset.cooldown = String(cooling);
     const normalLabel = mode === 'register' ? '注册并进入' : '登录并进入';
     $('submit-label').textContent = cooling ? `${remaining} 秒后可再次提交` : busy ? '正在验证…' : normalLabel;
@@ -89,6 +90,7 @@
     $('confirm-field').hidden = !register;
     $('confirm').disabled = !register;
     $('confirm').required = register;
+    $('passkey-login').hidden = $('passkey-login-hint').hidden = register;
     $('password').autocomplete = register ? 'new-password' : 'current-password';
     $('password').value = $('confirm').value = '';
     $('confirm').setCustomValidity('');
@@ -126,7 +128,7 @@
     try {
       const response = await fetch('/api/auth?action=' + mode, {
         method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: $('username').value.trim(), password: $('password').value, remember: $('remember').checked })
+        body: JSON.stringify({ username: $('username').value.trim(), password: $('password').value, remember: $('remember').checked }), signal: AbortSignal.timeout(30000)
       });
       // Respect Retry-After even if an upstream error response is not valid JSON.
       applyServerCooldown(response);
@@ -161,6 +163,14 @@
       if (!busy && initialAttempt === attempt) message(error instanceof TypeError ? '暂时无法连接账户服务，请检查网络后重试。' : error.message);
     }
   }
+  $('passkey-login').addEventListener('click', async () => {
+    syncCooldown(); if (busy || remainingSeconds()) return;
+    if (!window.mypixelPasskeys?.supported()) { message('当前浏览器或访问方式不支持通行密钥。请使用 HTTPS 下的新版浏览器，或继续使用用户名和密码登录。'); return; }
+    busy = true; attempt++; extendCooldown(Date.now() + COOLDOWN_MS); message('请在浏览器弹出的安全窗口中完成验证。');
+    try { await window.mypixelPasskeys.login($('remember').checked); message('验证成功，正在进入官网…', true); location.replace(home); }
+    catch (error) { if (error.retryAfterSeconds > 0) extendCooldown(Date.now() + error.retryAfterSeconds * 1000); message(error.message); }
+    finally { busy = false; syncCooldown(); }
+  });
   window.addEventListener('storage', event => { if (event.key === COOLDOWN_KEY || event.key === null) syncCooldown(); });
   window.addEventListener('pageshow', () => { syncCooldown(); restore(); });
   document.addEventListener('visibilitychange', () => { if (!document.hidden) syncCooldown(); });

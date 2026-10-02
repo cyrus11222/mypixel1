@@ -1,0 +1,48 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtemp, rm } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { hashPassword, tokenHash } from '../lib/auth.mjs';
+import { LocalStore } from '../lib/store.mjs';
+
+test('passkey HTTP bridge keeps browser binding out of JSON, enforces Origin and preserves sessions on wrong password', async t => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'mypixel-passkey-http-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const password = 'http-passkey-test-password'; const passwordHash = await hashPassword(password);
+  const now = Date.parse('2026-10-02T12:00:00+08:00'); const sessionToken = 'A'.repeat(43);
+  const file = path.join(directory, 'user.txt'); const store = new LocalStore(file);
+  await store.mutate(db => db.users.push({ id: 'passkey-http-user', username: 'HttpPlayer', key: 'httpplayer', passwordHash, sessions: [{ hash: tokenHash(sessionToken), expiresAt: now + 86_400_000 }] }));
+  const names = ['VERCEL', 'AUTH_STORE', 'LOCAL_DATA_FILE', 'RATE_LIMIT_SECRET', 'APP_ORIGIN', 'ADMIN_PASSWORD_HASH', 'ADMIN_EXECUTION_KEY_HASH'];
+  const saved = Object.fromEntries(names.map(name => [name, process.env[name]]));
+  t.after(() => { for (const name of names) { if (saved[name] === undefined) delete process.env[name]; else process.env[name] = saved[name]; } });
+  Object.assign(process.env, { AUTH_STORE: 'local', LOCAL_DATA_FILE: file, RATE_LIMIT_SECRET: 'http-passkey-test-only-'.repeat(4), APP_ORIGIN: 'http://127.0.0.1:3000' });
+  delete process.env.VERCEL; delete process.env.ADMIN_PASSWORD_HASH; delete process.env.ADMIN_EXECUTION_KEY_HASH;
+  const { default: handler } = await import('../api/auth.js');
+  const { authService } = await import('../lib/http.mjs'); authService().now = () => now;
+  const request = async (action, { body, method = 'POST', cookie = '', origin = process.env.APP_ORIGIN } = {}) => {
+    const res = { headers: {}, setHeader(name, value) { this.headers[name.toLowerCase()] = value; }, end(text) { this.payload = JSON.parse(text); } };
+    await handler({ method, url: '/api/auth?action=' + action, body, headers: { cookie, origin, 'content-type': 'application/json' }, socket: { remoteAddress: 'http-passkey-ip' } }, res);
+    return res;
+  };
+  const sessionCookie = `mypixel_session=${sessionToken}`;
+  assert.equal((await request('passkeys', { method: 'GET' })).statusCode, 401);
+  assert.equal((await request('passkey-register-options', { body: { password } })).statusCode, 401);
+  assert.equal((await request('passkey-auth-options', { body: { remember: false }, origin: 'https://attacker.invalid' })).statusCode, 403);
+  const incorrect = await request('passkey-register-options', { body: { password: 'incorrect-test-password', name: '手机' }, cookie: sessionCookie });
+  assert.equal(incorrect.statusCode, 403); assert.equal(incorrect.payload.code, 'REAUTH_FAILED'); assert.equal(incorrect.headers['set-cookie'], undefined);
+  assert.equal((await request('me', { method: 'GET', cookie: sessionCookie })).statusCode, 200);
+  const registration = await request('passkey-register-options', { body: { password, name: '我的手机' }, cookie: sessionCookie });
+  assert.equal(registration.statusCode, 200); assert.deepEqual(Object.keys(registration.payload), ['options']);
+  assert.match(registration.headers['set-cookie'], /HttpOnly; SameSite=Strict; Max-Age=300/);
+  const bindingToken = registration.headers['set-cookie'].split(';')[0].split('=')[1];
+  assert.ok(!JSON.stringify(registration.payload).includes(bindingToken)); assert.equal(registration.payload.bindingToken, undefined);
+  assert.ok(!JSON.stringify(registration.payload).includes(passwordHash)); assert.equal(registration.payload.options.authenticatorSelection.userVerification, 'required');
+  assert.deepEqual((await request('passkeys', { method: 'GET', cookie: sessionCookie })).payload, { passkeys: [] });
+  const authentication = await request('passkey-auth-options', { body: { remember: true } });
+  assert.equal(authentication.statusCode, 200); assert.deepEqual(Object.keys(authentication.payload), ['options']);
+  assert.equal(authentication.payload.options.userVerification, 'required'); assert.deepEqual(authentication.payload.options.allowCredentials, []);
+  assert.match(authentication.headers['set-cookie'], /Max-Age=300/);
+  const stored = await store.read(); assert.equal(stored.passkeyChallenges.length, 2);
+  assert.ok(stored.passkeyChallenges.every(challenge => challenge.bindingToken === undefined));
+});

@@ -103,7 +103,7 @@ test('HTTP guest browsing, origin checks, cookies, protected files and logout',a
  assert.equal((await post('join-community',{accepted:true,agreementVersion:'2026-10-01-v1'},sessionCookie)).status,401);
  res=await post('login',credentials('WebPlayer',false));assert.equal(res.status,429);assert.equal(res.headers.get('retry-after'),'60');assert.equal((await res.json()).retryAfterSeconds,60);
  now+=60_000;
- res=await post('login',credentials('WebPlayer',false));assert.equal(res.status,200);assert.ok(!res.headers.get('set-cookie').includes('Max-Age'));
+ res=await post('login',credentials('WebPlayer',false));assert.equal(res.status,200);assert.ok(!res.headers.getSetCookie().find(value=>value.startsWith('mypixel_session=')).includes('Max-Age'));
  const {cookie}=await import('../lib/http.mjs');process.env.VERCEL='1';process.env.APP_ORIGIN='https://example.com';
  assert.match(cookie('value',true),/^__Host-mypixel_session=value; Path=\/; HttpOnly; SameSite=Lax; Secure; Max-Age=2592000$/);
  delete process.env.VERCEL;

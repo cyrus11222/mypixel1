@@ -60,13 +60,13 @@ test('reserved admin bootstraps only through environment password and never upgr
   const text = JSON.stringify(admin.user); assert.ok(!text.includes('passwordHash')); assert.ok(!text.includes(adminPasswordHash));
 });
 
-test('administrator credential rotation invalidates old sessions and each new admin login revokes old sessions', async () => {
+test('administrator credential rotation invalidates old sessions while normal logins preserve other devices', async () => {
   const { auth, service, admin, clock } = await setup();
   const rotatedHash = await hashPassword('rotated-admin-test-password');
   assert.equal(await service({ adminPasswordHash: rotatedHash }).session(admin.token), null);
   clock(initialTime + 60_000);
   const next = await auth.login(credentials('admindevs', adminPassword), 'next-admin-ip');
-  assert.equal(await auth.session(admin.token), null); assert.equal((await auth.session(next.token)).role, 'admin');
+  assert.equal((await auth.session(admin.token)).role, 'admin'); assert.equal((await auth.session(next.token)).role, 'admin');
 });
 
 test('commands require admin and execution key, parse spaced reasons, ban correctly and never expose ban on wrong password', async () => {

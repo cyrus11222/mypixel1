@@ -6,6 +6,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
   <title>登录 · mypixel club</title><link rel="stylesheet" href="assets/auth.css">
   <link rel="icon" type="image/png" href="assets/mypixel-logo.png">
+  <script src="assets/passkeys.js" defer></script>
   <script src="assets/auth.js" defer></script>
 </head>
 <body class="login-page">
@@ -34,6 +35,8 @@
           <button class="auth-submit" id="submit" type="submit" aria-label="登录并进入"><span id="submit-label" aria-hidden="true">登录并进入</span><span aria-hidden="true">↗</span></button>
           <p id="cooldown-status" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></p>
         </form>
+        <button id="passkey-login" class="auth-passkey" type="button"><span aria-hidden="true">⌘</span> 使用通行密钥登录</button>
+        <p id="passkey-login-hint" class="field-hint">首次使用请先在用户中心绑定。登录时可在系统安全窗口选择本机验证或“使用其他设备”，按提示用手机扫码；可用方式取决于浏览器和设备。</p>
         <a class="auth-guest" id="guest-link" href="index.html">以游客身份浏览 <span aria-hidden="true">→</span></a>
         <noscript><p>请开启 JavaScript 后登录。</p></noscript>
         <p class="account-note">这是 mypixel club 官网账户，<br>无需提供 Microsoft 或 Minecraft 账户密码。</p>
