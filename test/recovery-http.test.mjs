@@ -1,0 +1,43 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtemp, rm } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { hashPassword, tokenHash } from '../lib/auth.mjs';
+import { LocalStore } from '../lib/store.mjs';
+
+test('HTTP recovery cookies grant password reset only, never expose tokens in JSON, and do not automatically log in', async t => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'mypixel-recovery-http-')); t.after(() => rm(directory, { recursive: true, force: true }));
+  const password = 'http-recovery-current-password'; const newPassword = 'http-recovery-new-password';
+  const passwordHash = await hashPassword(password); const token = 'A'.repeat(43); const now = Date.parse('2026-10-02T12:00:00+08:00');
+  const file = path.join(directory, 'user.txt'); const store = new LocalStore(file);
+  await store.mutate(db => db.users.push({ id: 'http-recovery-user', username: 'HttpRecovery', key: 'httprecovery', passwordHash, sessions: [{ hash: tokenHash(token), expiresAt: now + 86_400_000 }] }));
+  const names = ['VERCEL', 'AUTH_STORE', 'LOCAL_DATA_FILE', 'RATE_LIMIT_SECRET', 'APP_ORIGIN', 'ADMIN_PASSWORD_HASH', 'ADMIN_EXECUTION_KEY_HASH'];
+  const saved = Object.fromEntries(names.map(name => [name, process.env[name]]));
+  t.after(() => { for (const name of names) { if (saved[name] === undefined) delete process.env[name]; else process.env[name] = saved[name]; } });
+  Object.assign(process.env, { AUTH_STORE: 'local', LOCAL_DATA_FILE: file, RATE_LIMIT_SECRET: 'recovery-http-test-only-'.repeat(4), APP_ORIGIN: 'http://127.0.0.1:3000' });
+  delete process.env.VERCEL; delete process.env.ADMIN_PASSWORD_HASH; delete process.env.ADMIN_EXECUTION_KEY_HASH;
+  const { default: handler } = await import('../api/auth.js'); const { authService } = await import('../lib/http.mjs'); authService().now = () => now;
+  const request = async (action, { method = 'POST', body, cookie = '', origin = process.env.APP_ORIGIN } = {}) => {
+    const res = { headers: {}, setHeader(key, value) { this.headers[key.toLowerCase()] = value; }, end(value) { this.payload = JSON.parse(value); } };
+    await handler({ method, url: '/api/auth?action=' + action, body, headers: { origin, cookie, 'content-type': 'application/json' }, socket: { remoteAddress: 'recovery-http-ip' } }, res); return res;
+  };
+  const sessionCookie = `mypixel_session=${token}`;
+  const me = await request('me', { method: 'GET', cookie: sessionCookie }); assert.equal(me.payload.user.recovery.required, true);
+  const blocked = await request('bind-game', { cookie: sessionCookie, body: { gameId: 'HttpGame' } }); assert.equal(blocked.payload.code, 'RECOVERY_SETUP_REQUIRED');
+  const generated = await request('recovery-code-generate', { cookie: sessionCookie, body: { currentPassword: password } }); assert.equal(generated.statusCode, 200); assert.match(generated.headers['cache-control'], /no-store/);
+  const confirmed = await request('recovery-code-confirm', { cookie: sessionCookie, body: { confirmationId: generated.payload.confirmationId } }); assert.equal(confirmed.payload.user.recovery.required, false);
+  const verified = await request('recovery-code-verify', { body: { code: generated.payload.recoveryCode } }); assert.equal(verified.statusCode, 200);
+  assert.equal(verified.payload.username, 'HttpRecovery'); assert.equal(verified.payload.recoveryGranted, true); assert.equal(verified.payload.grantToken, undefined);
+  const grantCookie = verified.headers['set-cookie'].split(';')[0]; const grantToken = grantCookie.split('=')[1];
+  assert.match(verified.headers['set-cookie'], /mypixel_recovery=.*HttpOnly; SameSite=Strict; Max-Age=300/); assert.ok(!JSON.stringify(verified.payload).includes(grantToken));
+  assert.equal((await request('me', { method: 'GET', cookie: grantCookie })).statusCode, 401);
+  assert.equal((await request('change-password', { cookie: grantCookie, body: { oldPassword: password, newPassword } })).statusCode, 401);
+  assert.equal((await request('reset-password', { cookie: grantCookie, origin: 'https://attacker.invalid', body: { newPassword } })).statusCode, 403);
+  assert.equal((await request('reset-password', { body: { grantToken, newPassword } })).payload.code, 'RECOVERY_INVALID');
+  const reset = await request('reset-password', { cookie: grantCookie, body: { newPassword } }); assert.equal(reset.statusCode, 200); assert.equal(reset.payload.ok, true);
+  assert.ok(reset.headers['set-cookie'].every(value => value.includes('Max-Age=0')));
+  assert.equal((await request('me', { method: 'GET', cookie: sessionCookie })).statusCode, 401);
+  const replay = await request('reset-password', { cookie: grantCookie, body: { newPassword: 'another-test-new-password' } }); assert.equal(replay.payload.code, 'RECOVERY_INVALID');
+  const login = await request('login', { body: { username: 'HttpRecovery', password: newPassword, remember: true } }); assert.equal(login.statusCode, 200); assert.equal(login.payload.user.recovery.required, true);
+});

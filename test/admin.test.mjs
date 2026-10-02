@@ -17,6 +17,7 @@ const ticketInput = { type: 'op', purpose: '测试机械动力项目', durationM
 
 function user(username, token) {
   return { id: username, username, key: username.toLowerCase(), passwordHash: playerPasswordHash,
+    recoveryCode: { hash: 'e'.repeat(64), createdAt: initialTime, confirmedAt: initialTime },
     sessions: [{ hash: tokenHash(token), expiresAt: initialTime + 100 * 86_400_000 }] };
 }
 function repository() {

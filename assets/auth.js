@@ -147,6 +147,7 @@
     }
   });
   async function restore() {
+    if (location.hash === '#recover') return;
     if (location.protocol === 'file:') { message('请通过部署后的 Vercel 网站登录，或以游客身份预览。'); return; }
     const initialAttempt = attempt;
     try {

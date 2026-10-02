@@ -4,7 +4,7 @@ import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { LocalStore, GitHubStore, emptyDatabase } from '../lib/store.mjs';
-import { AuthService, REMEMBER_SECONDS, SESSION_SECONDS, tokenHash } from '../lib/auth.mjs';
+import { AuthService, REMEMBER_SECONDS, SESSION_SECONDS, tokenHash, COMMUNITY_AGREEMENT_VERSION } from '../lib/auth.mjs';
 const secret = 'test-only-'.repeat(8);
 const credentials = (username, remember = true) => ({ username, password:'a-long-test-password', remember });
 
@@ -93,14 +93,17 @@ test('HTTP guest browsing, origin checks, cookies, protected files and logout',a
  const raw=res.headers.get('set-cookie');const sessionCookie=raw.split(';')[0];
  assert.match(raw,/HttpOnly/);assert.match(raw,/SameSite=Lax/);assert.match(raw,/Max-Age=2592000/);assert.ok(!(await res.text()).includes('token'));
  res=await fetch(origin+'/',{headers:{Cookie:sessionCookie}});assert.equal(res.status,200);assert.match(await res.text(),/frp-sun.com:56663/);assert.match(res.headers.get('cache-control'),/no-store/);
+ res=await post('bind-game',{gameId:'WebPlayer_Game'},sessionCookie);assert.equal(res.status,403);assert.equal((await res.json()).code,'RECOVERY_SETUP_REQUIRED');
+ res=await post('recovery-code-generate',{currentPassword:credentials('WebPlayer').password},sessionCookie);assert.equal(res.status,200);const recoverySetup=await res.json();
+ res=await post('recovery-code-confirm',{confirmationId:recoverySetup.confirmationId},sessionCookie);assert.equal(res.status,200);
  res=await post('bind-game',{gameId:'WebPlayer_Game'},sessionCookie);assert.equal(res.status,200);assert.equal((await res.json()).user.gameBinding.gameId,'WebPlayer_Game');
- res=await post('join-community',{accepted:true,agreementVersion:'2026-10-01-v1'},sessionCookie);assert.equal(res.status,200);assert.equal((await res.json()).user.developerCommunity.agreementVersion,'2026-10-01-v1');
+ res=await post('join-community',{accepted:true,agreementVersion:COMMUNITY_AGREEMENT_VERSION},sessionCookie);assert.equal(res.status,200);assert.equal((await res.json()).user.developerCommunity.agreementVersion,COMMUNITY_AGREEMENT_VERSION);
  assert.equal((await post('unbind-game',{},sessionCookie)).status,409);
  assert.equal((await post('bind-game',{gameId:'ChangedGame'},sessionCookie,'https://attacker.invalid')).status,403);
  for(const file of ['/user.txt','/data/user.txt','/.env','/private/index.html','/lib/store.mjs'])assert.equal((await fetch(origin+file)).status,404);
  res=await post('logout',{},sessionCookie);assert.equal(res.status,200);assert.match(res.headers.get('set-cookie'),/Max-Age=0/);
  assert.equal((await fetch(origin+'/api/auth?action=me',{headers:{Cookie:sessionCookie}})).status,401);
- assert.equal((await post('join-community',{accepted:true,agreementVersion:'2026-10-01-v1'},sessionCookie)).status,401);
+ assert.equal((await post('join-community',{accepted:true,agreementVersion:COMMUNITY_AGREEMENT_VERSION},sessionCookie)).status,401);
  res=await post('login',credentials('WebPlayer',false));assert.equal(res.status,429);assert.equal(res.headers.get('retry-after'),'60');assert.equal((await res.json()).retryAfterSeconds,60);
  now+=60_000;
  res=await post('login',credentials('WebPlayer',false));assert.equal(res.status,200);assert.ok(!res.headers.getSetCookie().find(value=>value.startsWith('mypixel_session=')).includes('Max-Age'));

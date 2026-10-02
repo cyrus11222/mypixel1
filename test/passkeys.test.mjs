@@ -276,6 +276,8 @@ test('deleting the last key requires password reauthentication and invalidates p
   const id = b64(authenticator.id);
   await assert.rejects(() => f.passkeys.remove(tokenA, { id, password: 'incorrect-fixture-password' }), error => error.status === 403 && error.code === 'REAUTH_FAILED');
   await assert.rejects(() => f.passkeys.remove(tokenB, { id, password }), rejectCode('PASSKEY_NOT_FOUND'));
+  await assert.rejects(() => f.passkeys.remove(tokenA, { id, password }), rejectCode('RECOVERY_METHOD_REQUIRED'));
+  await f.store.mutate(db => { db.users[0].recoveryCode = { hash: 'a'.repeat(64), createdAt: initialTime, confirmedAt: initialTime }; });
   assert.equal((await f.passkeys.remove(tokenA, { id, password })).passkeys.length, 0);
   await assert.rejects(() => f.passkeys.verifyAuthentication({ response: assertion(authenticator, issued.options) }, issued.bindingToken), rejectCode('PASSKEY_VERIFICATION_FAILED'));
   assert.ok(await f.auth.session(tokenA));
@@ -331,4 +333,81 @@ test('verified credentials and challenges round-trip through the real store with
   assert.equal(persisted.users[0].passkeys[0].counter, 1);
   assert.equal(persisted.users[0].passwordHash, passwordHash);
   assert.deepEqual(persisted.users[1], database().users[1]);
+});
+
+test('passkey recovery proves identity into a restricted grant without logging in and is single use', async () => {
+  const f = await fixture(); const { authenticator } = await f.register();
+  const issued = await f.passkeys.recoveryOptions({}, { ip: 'recover-fixture' });
+  assert.deepEqual(issued.options.allowCredentials, []);
+  const response = assertion(authenticator, issued.options);
+  const result = await f.passkeys.verifyRecovery({ response }, issued.bindingToken);
+  assert.equal(result.username, 'Player0');
+  assert.equal(result.recoveryGranted, true);
+  assert.equal(result.expiresInSeconds, 300);
+  assert.equal((await f.store.read()).users[0].sessions.length, 1);
+  assert.equal(await f.auth.session(result.grantToken), null);
+  await assert.rejects(() => f.passkeys.verifyRecovery({ response }, issued.bindingToken), rejectCode('PASSKEY_CHALLENGE_INVALID'));
+});
+
+test('recovery cannot reset a supplied different username or confuse login and recovery challenges', async () => {
+  const f = await fixture(); const { authenticator } = await f.register();
+  const wrong = await f.passkeys.recoveryOptions({ username: 'Player1' }, { ip: 'recover-fixture' });
+  await assert.rejects(() => f.passkeys.verifyRecovery({ response: assertion(authenticator, wrong.options) }, wrong.bindingToken), rejectCode('PASSKEY_VERIFICATION_FAILED'));
+  f.advance();
+  const correct = await f.passkeys.recoveryOptions({ username: 'pLaYeR0' }, { ip: 'recover-fixture' });
+  const response = assertion(authenticator, correct.options);
+  await assert.rejects(() => f.passkeys.verifyAuthentication({ response }, correct.bindingToken), rejectCode('PASSKEY_CHALLENGE_INVALID'));
+  const login = await f.challenge();
+  await assert.rejects(() => f.passkeys.verifyRecovery({ response: assertion(authenticator, login.options) }, login.bindingToken), rejectCode('PASSKEY_CHALLENGE_INVALID'));
+  assert.equal((await f.passkeys.verifyRecovery({ response }, correct.bindingToken)).username, 'Player0');
+});
+
+test('concurrent identical recovery assertions create exactly one restricted grant', async () => {
+  const f = await fixture(); const { authenticator } = await f.register();
+  const issued = await f.passkeys.recoveryOptions({}, { ip: 'recover-fixture' });
+  const response = assertion(authenticator, issued.options);
+  const attempts = await Promise.allSettled([
+    f.passkeys.verifyRecovery({ response }, issued.bindingToken),
+    f.passkeys.verifyRecovery({ response }, issued.bindingToken)
+  ]);
+  assert.equal(attempts.filter(result => result.status === 'fulfilled').length, 1);
+  assert.equal((await f.store.read()).users[0].sessions.length, 1);
+});
+
+test('recovery enforces UV, signature, browser binding, five-minute expiry and current credential ownership', async () => {
+  for (const change of ['uv', 'signature', 'browser', 'expire', 'delete']) {
+    const f = await fixture(); const { authenticator } = await f.register();
+    const issued = await f.passkeys.recoveryOptions({}, { ip: 'recover-fixture' });
+    const response = assertion(authenticator, issued.options, database().users[0], change === 'uv' ? { authData: { flags: 1 } } : {});
+    if (change === 'signature') response.response.signature = b64(randomBytes(70));
+    if (change === 'expire') f.advance(PASSKEY_CHALLENGE_MS);
+    if (change === 'delete') await f.store.mutate(db => { db.users[0].passkeys = []; });
+    await assert.rejects(() => f.passkeys.verifyRecovery({ response }, change === 'browser' ? tokenB : issued.bindingToken));
+    assert.equal((await f.store.read()).recoveryGrants?.length || 0, 0);
+  }
+});
+
+test('removing the passkey used for recovery revokes its outstanding password reset grant', async () => {
+  const f = await fixture(); const first = await f.register(); await f.register();
+  const issued = await f.passkeys.recoveryOptions({}, { ip: 'recover-fixture' });
+  const grant = await f.passkeys.verifyRecovery({ response: assertion(first.authenticator, issued.options) }, issued.bindingToken);
+  await f.passkeys.remove(tokenA, { id: b64(first.authenticator.id), password });
+  await assert.rejects(() => f.auth.resetPassword(grant.grantToken, { newPassword: 'unusable-grant-new-password' }), rejectCode('RECOVERY_INVALID'));
+  assert.equal((await f.store.read()).users[0].passwordHash, passwordHash);
+});
+
+test('password changes invalidate previously signed login and recovery challenges including the same-millisecond boundary', async () => {
+  for (const [phase, rotationDelay] of [['login', 0], ['login', 1], ['recover', 0], ['recover', 1]]) {
+    const f = await fixture(); const { authenticator } = await f.register();
+    const issued = phase === 'login' ? await f.challenge() : await f.passkeys.recoveryOptions({}, { ip: 'recover-fixture' });
+    const response = assertion(authenticator, issued.options);
+    f.advance(rotationDelay);
+    await f.auth.changePassword(tokenA, { oldPassword: password, newPassword: 'new-password-keeps-passkey' }, { ip: 'fixture-change' });
+    const verify = (data, binding) => phase === 'login' ? f.passkeys.verifyAuthentication(data, binding) : f.passkeys.verifyRecovery(data, binding);
+    await assert.rejects(() => verify({ response }, issued.bindingToken), rejectCode('PASSKEY_CHALLENGE_INVALID'));
+    f.advance();
+    const fresh = phase === 'login' ? await f.challenge() : await f.passkeys.recoveryOptions({}, { ip: 'recover-fixture' });
+    const result = await verify({ response: assertion(authenticator, fresh.options) }, fresh.bindingToken);
+    assert.equal(phase === 'login' ? result.user.username : result.username, 'Player0');
+  }
 });

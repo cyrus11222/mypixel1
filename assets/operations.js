@@ -183,6 +183,9 @@
     'playerout <用户名>            永久删除账号（另填执行密钥并确认）',
     'ztsset add <用户名>            授予工单管理员',
     'ztsset remove <用户名>         撤销工单管理员',
+    'rsh ls                        列出 Rsh 内文件与发布状态',
+    'rsh set "文件路径" "显示名称" add     发布或更新下载文件',
+    'rsh set "文件路径" "显示名称" remove  撤下下载（不删除仓库文件）',
     '执行密钥不会写入命令记录。带密钥的完整命令请粘贴到下方专用密码框。',
   ].join('\n');
   function keyMode() {
@@ -228,6 +231,10 @@
     try {
       const result = await account.request('admin-command', { command });
       terminalLine(redact(result.message || '命令已执行。'), 'terminal-success');
+      if (kind === 'rsh' && Array.isArray(result.files)) {
+        for (const file of result.files) terminalLine(`${file.published ? '[已发布]' : '[未发布]'} ${file.path} · ${file.bytes} B${file.displayName ? ` · 显示名：${file.displayName}` : ''}`);
+      }
+      if (kind === 'rsh') window.dispatchEvent(new Event('mypixel:downloads-updated'));
       $('admin-command').value = ''; keyMode();
       if (kind === 'setintty') await account.loadConfig();
       await account.refresh();
@@ -243,7 +250,7 @@
     if (!isAdmin() || adminBusy) return;
     const input = $('admin-command').value.trim(); const tokens = input.split(/\s+/); const kind = tokens[0].toLowerCase();
     if (kind === 'help') { terminalLine(helpText); $('admin-command').value = ''; keyMode(); return; }
-    if (!['ban', 'unban', 'setintty', 'playerout', 'ztsset'].includes(kind)) { message('admin-command-message', '未知命令，输入 help 查看支持的命令。'); return; }
+    if (!['ban', 'unban', 'setintty', 'playerout', 'ztsset', 'rsh'].includes(kind)) { message('admin-command-message', '未知命令，输入 help 查看支持的命令。'); return; }
     const secret = $('admin-key').value;
     if ((kind === 'ban' || kind === 'playerout') && !secret) { message('admin-command-message', '请在执行密钥框填写本次授权密钥。'); $('admin-key').focus(); return; }
     if (kind === 'playerout') {

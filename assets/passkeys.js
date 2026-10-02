@@ -83,5 +83,13 @@
       return await request('passkey-register-verify', { response: responseToJSON(credential, true) });
     } catch (error) { throw friendly(error); }
   }
-  window.mypixelPasskeys = Object.freeze({ supported, login, register });
+  async function recover(username) {
+    ensureSupported();
+    try {
+      const result = await request('passkey-recovery-options', username ? { username } : {});
+      const credential = await navigator.credentials.get({ publicKey: optionsFromJSON(result.options, false) });
+      return await request('passkey-recovery-verify', { response: responseToJSON(credential, false) });
+    } catch (error) { throw friendly(error); }
+  }
+  window.mypixelPasskeys = Object.freeze({ supported, login, register, recover });
 })();

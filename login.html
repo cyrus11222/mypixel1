@@ -8,6 +8,7 @@
   <link rel="icon" type="image/png" href="assets/mypixel-logo.png">
   <script src="assets/passkeys.js" defer></script>
   <script src="assets/auth.js" defer></script>
+  <script src="assets/recovery-login.js" defer></script>
 </head>
 <body class="login-page">
   <main class="auth-layout">
@@ -37,6 +38,8 @@
         </form>
         <button id="passkey-login" class="auth-passkey" type="button"><span aria-hidden="true">⌘</span> 使用通行密钥登录</button>
         <p id="passkey-login-hint" class="field-hint">首次使用请先在用户中心绑定。登录时可在系统安全窗口选择本机验证或“使用其他设备”，按提示用手机扫码；可用方式取决于浏览器和设备。</p>
+        <a id="forgot-account-link" class="forgot-account-link" href="#recover">忘记用户名或密码？</a>
+        <section id="recovery-panel" hidden aria-label="账户找回"><div id="recovery-verify-panel"><p class="field-hint">通过已绑定的通行密钥或一次性恢复码确认身份。用户名可不填，验证成功后会显示你的账户。</p><label class="field-label" for="recovery-username">用户名（选填）</label><input id="recovery-username" type="text" autocomplete="username" maxlength="20" pattern="[A-Za-z0-9_]{3,20}" autocapitalize="none" spellcheck="false" placeholder="记得用户名时可填写"><div class="recovery-method-tabs" aria-label="选择找回方式"><button id="recover-method-passkey" type="button" aria-pressed="true">通行密钥</button><button id="recover-method-code" type="button" aria-pressed="false">一次性恢复码</button></div><div id="recovery-passkey-fields"><p class="field-hint">使用以前绑定的通行密钥，在浏览器安全窗口完成验证。手机扫码方式由系统弹窗提供。</p><button id="recovery-passkey-submit" class="auth-submit" type="button"><span>使用通行密钥找回</span><span aria-hidden="true">↗</span></button></div><form id="recovery-code-form" hidden><label class="field-label" for="recovery-code">一次性恢复码</label><input id="recovery-code" type="password" maxlength="180" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="输入之前保存的完整恢复码" required><p class="field-hint">验证后请在 5 分钟内完成密码重置。最终重置成功才会消耗恢复码；中途关闭可重新验证。</p><button id="recovery-code-submit" class="auth-submit" type="submit"><span>验证恢复码并找回</span><span aria-hidden="true">↗</span></button></form></div><section id="recovery-reset-panel" hidden aria-labelledby="recovery-reset-title"><p class="recovered-account">已确认账户：<strong id="recovered-username"></strong></p><h3 id="recovery-reset-title" class="recovery-reset-title">设置新的登录密码</h3><p class="field-hint">本次授权仅能重置密码。成功后所有设备退出，通行密钥和恢复码失效；请重新登录并设置恢复方式。</p><form id="recovery-reset-form"><label class="field-label" for="recovery-new-password">新密码</label><input id="recovery-new-password" type="password" autocomplete="new-password" minlength="10" maxlength="128" required><label class="field-label" for="recovery-confirm-password">确认新密码</label><input id="recovery-confirm-password" type="password" autocomplete="new-password" minlength="10" maxlength="128" required><button id="recovery-reset-submit" class="auth-submit" type="submit"><span>保存新密码</span><span aria-hidden="true">↗</span></button></form><p id="recovery-expiry" class="field-hint"></p></section><p id="recovery-message" class="auth-message" role="status" aria-live="polite"></p><a class="recovery-return-link" href="#login">返回登录</a></section>
         <a class="auth-guest" id="guest-link" href="index.html">以游客身份浏览 <span aria-hidden="true">→</span></a>
         <noscript><p>请开启 JavaScript 后登录。</p></noscript>
         <p class="account-note">这是 mypixel club 官网账户，<br>无需提供 Microsoft 或 Minecraft 账户密码。</p>

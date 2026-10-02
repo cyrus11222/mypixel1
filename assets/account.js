@@ -28,6 +28,7 @@
   let busy = false;
   let checking = false;
   let revision = 0;
+  let pendingAccountMutations = 0;
   let sessionUnknown = false;
   let renderedGameId;
   const invokers = new WeakMap();
@@ -116,18 +117,20 @@
   function syncView() {
     const isCommunity = location.hash === '#developers';
     const isReview = location.hash === '#tickets';
-    ui.home.hidden = isCommunity || isReview;
+    const isDownloads = location.hash === '#downloads';
+    ui.home.hidden = isCommunity || isReview || isDownloads;
     ui.community.hidden = !isCommunity;
     $('review-view').hidden = !isReview;
+    $('downloads-view').hidden = !isDownloads;
     document.body.classList.toggle('community-active', isCommunity);
     for (const link of document.querySelectorAll('.nav-links a')) {
-      const active = link.hash === '#developers' ? isCommunity : !isCommunity && !isReview && link.hash === (location.hash || '#home');
+      const active = link.hash === '#developers' ? isCommunity : link.hash === '#downloads' ? isDownloads : !isCommunity && !isReview && !isDownloads && link.hash === (location.hash || '#home');
       if (active) link.setAttribute('aria-current', 'page');
       else link.removeAttribute('aria-current');
     }
-    document.title = isReview ? '工单审批 · mypixel club' : isCommunity ? '玩家开发者社区 · mypixel club' : 'mypixel club · 纯创造机械动力服务器';
+    document.title = isDownloads ? '下载中心 · mypixel club' : isReview ? '工单审批 · mypixel club' : isCommunity ? '玩家开发者社区 · mypixel club' : 'mypixel club · 纯创造机械动力服务器';
     requestAnimationFrame(() => {
-      if (isCommunity || isReview) window.scrollTo({ top: 0, behavior: 'instant' });
+      if (isCommunity || isReview || isDownloads) window.scrollTo({ top: 0, behavior: 'instant' });
       else {
         window.dispatchEvent(new Event('resize'));
         const target = document.getElementById(location.hash.slice(1) || 'home');
@@ -153,7 +156,7 @@
   }
 
   async function check() {
-    if (isFile || checking || busy) return;
+    if (isFile || checking || busy || pendingAccountMutations) return;
     checking = true;
     const currentRevision = revision;
     try {
@@ -269,10 +272,13 @@
   async function request(action, payload) {
     if (isFile) throw new Error('请在已部署的网站或本地开发服务器使用此功能。');
     const options = { credentials: 'same-origin', cache: 'no-store', signal: AbortSignal.timeout(30000) };
-    if (payload !== undefined) Object.assign(options, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-    const result = await readResponse(await fetch(`/api/auth?action=${action}`, options));
-    if (result.user) { user = result.user; wasAuthenticated = true; render(); publishUser(); }
-    return result;
+    const mutation = payload !== undefined;
+    if (mutation) { Object.assign(options, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); pendingAccountMutations += 1; revision += 1; }
+    try {
+      const result = await readResponse(await fetch(`/api/auth?action=${action}`, options));
+      if (result.user) { user = result.user; wasAuthenticated = true; render(); publishUser(); }
+      return result;
+    } finally { if (mutation) pendingAccountMutations -= 1; }
   }
   async function loadConfig() {
     if (isFile || agreementLoading) return publicConfig;

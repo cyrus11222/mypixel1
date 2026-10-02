@@ -41,6 +41,9 @@ test('admin and ticket HTTP routes enforce origin, session, body contracts and s
   now += 60_000;
   const player = await post('register', { username: 'ApiPlayer', password: 'api-player-test-password', remember: true }); assert.equal(player.statusCode, 201);
   const playerCookie = player.headers['set-cookie'][0].split(';')[0];
+  const setup = await post('recovery-code-generate', { currentPassword: 'api-player-test-password' }, playerCookie);
+  assert.equal(setup.statusCode, 200);
+  assert.equal((await post('recovery-code-confirm', { confirmationId: setup.payload.confirmationId }, playerCookie)).statusCode, 200);
   assert.equal((await request('admin-state', { cookie: playerCookie })).statusCode, 403);
   await post('bind-game', { gameId: 'ApiPlayerGame' }, playerCookie);
   await post('join-community', { accepted: true, agreementVersion: updated.payload.agreement.version }, playerCookie);
